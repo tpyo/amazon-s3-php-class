@@ -820,7 +820,7 @@ final class S3Request {
 			default: break;
 		}
 
-		// Exececute, grab errors
+		// Execute, grab errors
 		if (curl_exec($curl))
 			$this->response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 		else
