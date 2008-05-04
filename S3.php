@@ -273,7 +273,7 @@ class S3 {
 		elseif (isset($input['data']))
 			$rest->data = $input['data'];
 
-		// Content-Length
+		// Content-Length (required)
 		if (isset($input['size']) && $input['size'] > 0)
 			$rest->size = $input['size'];
 		else {
