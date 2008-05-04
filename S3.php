@@ -44,6 +44,10 @@ class S3 {
 
 	/**
 	* Constructor, used if you're not calling the class statically
+	*
+	* @param string $accessKey Access key
+	* @param string $secretKey Secret key
+	* @return void
 	*/
 	public function __construct($accessKey = null, $secretKey = null) {
 		if ($accessKey !== null && $secretKey !== null)
@@ -401,7 +405,7 @@ class S3 {
 	* Enable logging for buckets
 	*
 	* @param string $bucket Bucket name
-	* @param string $targetBucket Target bug (where logs are stored)
+	* @param string $targetBucket Target bucket (where logs are stored)
 	* @param string $targetPrefix Log prefix (e,g; domain.com-)
 	* @return boolean
 	*/
