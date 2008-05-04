@@ -1,7 +1,10 @@
 #!/usr/local/bin/php
 <?php
-
-// S3 class usage
+/**
+* $Id$
+*
+* S3 class usage
+*/
 
 //require_once 'auth-constants.php';
 require_once 'S3.php';
