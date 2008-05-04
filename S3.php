@@ -402,14 +402,14 @@ class S3 {
 
 
 	/**
-	* Enable logging for buckets
+	* Set logging for buckets
 	*
 	* @param string $bucket Bucket name
 	* @param string $targetBucket Target bucket (where logs are stored)
 	* @param string $targetPrefix Log prefix (e,g; domain.com-)
 	* @return boolean
 	*/
-	public static function enableBucketLogging($bucket, $targetBucket, $targetPrefix) {
+	public static function setBucketLogging($bucket, $targetBucket, $targetPrefix) {
 		$dom = new DOMDocument;
 		$bucketLoggingStatus = $dom->createElement('BucketLoggingStatus');
 		$bucketLoggingStatus->setAttribute('xmlns', 'http://s3.amazonaws.com/doc/2006-03-01/');
@@ -433,7 +433,7 @@ class S3 {
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			trigger_error(sprintf("S3::enableBucketLogging({$bucket}, {$uri}): [%s] %s",
+			trigger_error(sprintf("S3::setBucketLogging({$bucket}, {$uri}): [%s] %s",
 			$rest->error['code'], $rest->error['message']), E_USER_WARNING);
 			return false;
 		}
@@ -450,14 +450,14 @@ class S3 {
 	* @param string $bucket Bucket name
 	* @return array | false
 	*/
-	public static function getBucketLoggingStatus($bucket = '') {
+	public static function getBucketLogging($bucket = '') {
 		$rest = new S3Request('GET', $bucket, '');
 		$rest->setParameter('logging', null);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			trigger_error(sprintf("S3::getBucketLoggingStatus({$bucket}): [%s] %s",
+			trigger_error(sprintf("S3::getBucketLogging({$bucket}): [%s] %s",
 			$rest->error['code'], $rest->error['message']), E_USER_WARNING);
 			return false;
 		}

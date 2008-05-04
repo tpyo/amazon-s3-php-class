@@ -6,9 +6,7 @@
 * Note: Although this wrapper works, it would be more efficient to use S3 class instead
 */
 
-//require_once 'auth-constants.php';
-require_once 'S3.php';
-
+if (!class_exists('S3')) require_once 'S3.php';
 
 // AWS access info
 if (!defined('awsAccessKey')) define('awsAccessKey', 'change-this');

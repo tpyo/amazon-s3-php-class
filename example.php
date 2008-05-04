@@ -6,15 +6,13 @@
 * S3 class usage
 */
 
-//require_once 'auth-constants.php';
-require_once 'S3.php';
-
+if (!class_exists('S3')) require_once 'S3.php';
 
 // AWS access info
 if (!defined('awsAccessKey')) define('awsAccessKey', 'change-this');
 if (!defined('awsSecretKey')) define('awsSecretKey', 'change-this');
 
-$uploadFile = 'S3.php'; // File to upload, we'll use the S3 class since it exists
+$uploadFile = dirname(__FILE__).'/S3.php'; // File to upload, we'll use the S3 class since it exists
 $bucketName = uniqid('s3test'); // Temporary bucket
 
 // If you want to use PECL Fileinfo for MIME types:
@@ -49,11 +47,18 @@ if ($s3->putBucket($bucketName, S3::ACL_PUBLIC_READ)) {
 	if ($s3->putObjectFile($uploadFile, $bucketName, baseName($uploadFile), S3::ACL_PUBLIC_READ)) {
 		echo "S3::putObjectFile(): File copied to {$bucketName}/".baseName($uploadFile).PHP_EOL;
 
+
+		// Get the contents of our bucket
+		$contents = $s3->getBucket($bucketName);
+		echo "S3::getBucket(): Files in bucket {$bucketName}: ".print_r($contents, 1);
+
+
 		// Get object info
 		$info = $s3->getObjectInfo($bucketName, baseName($uploadFile));
 		echo "S3::getObjecInfo(): Info for {$bucketName}/".baseName($uploadFile).': '.print_r($info, 1);
 
-		// You can also fetch the object into memory:
+
+		// You can also fetch the object into memory
 		// var_dump("S3::getObject() to memory", $s3->getObject($bucketName, baseName($uploadFile)));
 
 		// Or save it into a file (write stream)
@@ -63,9 +68,26 @@ if ($s3->putBucket($bucketName, S3::ACL_PUBLIC_READ)) {
 		// var_dump("S3::getObject() to resource", $s3->getObject($bucketName, baseName($uploadFile), fopen('savefile.txt', 'wb')));
 
 
-		// Get the contents of our bucket
-		$contents = $s3->getBucket($bucketName);
-		echo "S3::getBucket(): Files in bucket {$bucketName}: ".print_r($contents, 1);
+
+		// Get the access control policy for a bucket:
+		// $acp = $s3->getAccessControlPolicy($bucketName);
+		// echo "S3::getAccessControlPolicy(): {$bucketName}: ".print_r($acp, 1);
+
+		// Update an access control policy ($acp should be the data returned by S3::getAccessControlPolicy())
+		// $s3->setAccessControlPolicy($bucketName, '', $acp);
+		// $acp = $s3->getAccessControlPolicy($bucketName);
+		// echo "S3::getAccessControlPolicy(): {$bucketName}: ".print_r($acp, 1);
+
+
+		// Enable logging for a bucket (remember, logbucket must be writable by the log group too):
+		// $s3->enableBucketLogging($bucketName, 'logbucket', 'prefix');
+
+		// if (($logging = $s3->getBucketLogging($bucketName)) !== false) {
+		// 	echo "S3::getBucketLogging(): Logging for {$bucketName}: ".print_r($contents, 1);
+		// } else {
+		// 	echo "S3::getBucketLogging(): Logging for {$bucketName} not enabled\n";
+		// }
+
 
 		// Delete our file
 		if ($s3->deleteObject($bucketName, baseName($uploadFile))) {
