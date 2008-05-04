@@ -402,7 +402,7 @@ class S3 {
 
 
 	/**
-	* Set logging for buckets
+	* Set logging for a bucket
 	*
 	* @param string $bucket Bucket name
 	* @param string $targetBucket Target bucket (where logs are stored)
