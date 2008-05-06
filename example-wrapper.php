@@ -3,7 +3,7 @@
 /**
 * $Id$
 *
-* Note: Although this wrapper works, it would be more efficient to use S3 class instead
+* Note: Although this wrapper works, it would be more efficient to use the S3 class instead
 */
 
 if (!class_exists('S3')) require_once 'S3.php';
