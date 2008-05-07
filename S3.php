@@ -695,10 +695,10 @@ final class S3Request {
 		$this->uri = $uri !== '' ? '/'.$uri : '/';
 
 		if ($this->bucket !== '') {
-			$bucket = explode('/', $bucket);
-			$this->resource = '/'.$bucket[0].$this->uri;
-			$this->headers['Host'] = $bucket[0].'.s3.amazonaws.com';
-			$this->bucket = implode('/', $bucket);
+			$this->bucket = explode('/', $this->bucket);
+			$this->resource = '/'.$this->bucket[0].$this->uri;
+			$this->headers['Host'] = $this->bucket[0].'.s3.amazonaws.com';
+			$this->bucket = implode('/', $this->bucket);
 		} else {
 			$this->headers['Host'] = 's3.amazonaws.com';
 			if (strlen($this->uri) > 1)
