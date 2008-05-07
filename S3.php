@@ -691,7 +691,7 @@ final class S3Request {
 	*/
 	function __construct($verb, $bucket = '', $uri = '') {
 		$this->verb = $verb;
-		$this->bucket = $bucket;
+		$this->bucket = strtolower($bucket);
 		$this->uri = $uri !== '' ? '/'.$uri : '/';
 
 		if ($this->bucket !== '') {
