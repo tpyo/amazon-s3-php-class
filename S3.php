@@ -763,12 +763,12 @@ final class S3Request {
 			$query = substr($query, 0, -1);
 			$this->uri .= $query;
 
-			if (!isset($this->parameters['prefix']) &&
+			/*if (!isset($this->parameters['prefix']) &&
 			!isset($this->parameters['marker']) &&
-			!isset($this->parameters['max-keys'])) {
-				if (isset($this->parameters['acl']) || (!isset($this->parameters['logging'])))
-					$this->resource .= $query;
-			}
+			!isset($this->parameters['max-keys']) &&
+			!isset($this->parameters['logging']))
+			*/
+			if (isset($this->parameters['acl'])) $this->resource .= $query;
 		}
 		$url = (extension_loaded('openssl')?'https://':'http://').$this->headers['Host'].$this->uri;
 		//var_dump($this->bucket, $this->uri, $this->resource, $url);
