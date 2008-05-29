@@ -30,7 +30,7 @@
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.2.4-beta
+* @version 0.2.5
 */
 class S3 {
 	// ACL flags
@@ -763,12 +763,10 @@ final class S3Request {
 			$query = substr($query, 0, -1);
 			$this->uri .= $query;
 
-			/*if (!isset($this->parameters['prefix']) &&
-			!isset($this->parameters['marker']) &&
-			!isset($this->parameters['max-keys']) &&
-			!isset($this->parameters['logging']))
-			*/
-			if (isset($this->parameters['acl'])) $this->resource .= $query;
+			if (isset($this->parameters['acl']) ||
+			isset($this->parameters['location']) ||
+			isset($this->parameters['torrent']))
+				$this->resource .= $query;
 		}
 		$url = (extension_loaded('openssl')?'https://':'http://').$this->headers['Host'].$this->uri;
 		//var_dump($this->bucket, $this->uri, $this->resource, $url);
@@ -896,7 +894,7 @@ final class S3Request {
 		if (substr($data, 0, 4) == 'HTTP')
 			$this->response->code = (int)substr($data, 9, 3);
 		else {
-			list($header, $value) = explode(': ', trim($data));
+			list($header, $value) = explode(': ', trim($data), 2);
 			if ($header == 'Last-Modified')
 				$this->response->headers['time'] = strtotime($value);
 			elseif ($header == 'Content-Length')
