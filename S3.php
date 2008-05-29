@@ -30,7 +30,7 @@
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.2.5
+* @version 0.2.6
 */
 class S3 {
 	// ACL flags
@@ -511,7 +511,7 @@ class S3 {
 		$accessControlPolicy->appendChild($accessControlList);
 		$dom->appendChild($accessControlPolicy);
 
-		$rest = new S3Request('PUT', $bucket, '');
+		$rest = new S3Request('PUT', $bucket, $uri);
 		$rest->setParameter('acl', null);
 		$rest->data = $dom->saveXML();
 		$rest->size = strlen($rest->data);
@@ -763,13 +763,14 @@ final class S3Request {
 			$query = substr($query, 0, -1);
 			$this->uri .= $query;
 
-			if (isset($this->parameters['acl']) ||
-			isset($this->parameters['location']) ||
-			isset($this->parameters['torrent']))
+			if (array_key_exists('acl', $this->parameters) ||
+			array_key_exists('location', $this->parameters) ||
+			array_key_exists('torrent', $this->parameters))
 				$this->resource .= $query;
+
 		}
 		$url = (extension_loaded('openssl')?'https://':'http://').$this->headers['Host'].$this->uri;
-		//var_dump($this->bucket, $this->uri, $this->resource, $url);
+		var_dump($this->bucket, $this->uri, $this->resource, $url);
 
 		// Basic setup
 		$curl = curl_init();
