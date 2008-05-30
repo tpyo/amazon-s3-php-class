@@ -30,7 +30,7 @@
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.2.6
+* @version 0.2.7
 */
 class S3 {
 	// ACL flags
@@ -770,7 +770,7 @@ final class S3Request {
 
 		}
 		$url = (extension_loaded('openssl')?'https://':'http://').$this->headers['Host'].$this->uri;
-		var_dump($this->bucket, $this->uri, $this->resource, $url);
+		//var_dump($this->bucket, $this->uri, $this->resource, $url);
 
 		// Basic setup
 		$curl = curl_init();
