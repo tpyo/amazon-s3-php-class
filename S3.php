@@ -30,7 +30,7 @@
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.2.7
+* @version 0.2.8
 */
 class S3 {
 	// ACL flags
@@ -787,7 +787,12 @@ final class S3Request {
 			if (strlen($value) > 0) $headers[] = $header.': '.$value;
 		foreach ($this->amzHeaders as $header => $value)
 			if (strlen($value) > 0) $amz[] = strToLower($header).':'.$value;
-		$amz = (sizeof($amz) > 0) ? "\n".implode("\n", $amz) : '';
+
+		// AMZ headers must be sorted (thanks Malone)
+		if (sizeof($amz) > 0) {
+			sort($amz);
+			$amz = "\n".implode("\n", $amz);
+		} else $amz = '';
 
 		// Authorization string
 		$headers[] = 'Authorization: ' . S3::__getSignature(
