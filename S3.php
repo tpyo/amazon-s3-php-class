@@ -30,7 +30,7 @@
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.2.8
+* @version 0.2.9
 */
 class S3 {
 	// ACL flags
@@ -169,22 +169,53 @@ class S3 {
 		return $results;
 	}
 
+	/**
+	* Get a bucket's location
+	*
+	* @param string $bucket Bucket name
+	* @return mixed
+	*/
+	public function getBucketLocation($bucket) {
+		$rest = new S3Request('GET', $bucket, '');
+		$rest->setParameter('location', null);
+		$rest = $rest->getResponse();
+		if ($rest->error === false && $rest->code !== 200)
+			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
+		if ($rest->error !== false) {
+			trigger_error(sprintf("S3::getBucketLocation({$bucket}): [%s] %s", $rest->error['code'], $rest->error['message']), E_USER_WARNING);
+			return false;
+		}
+		return (isset($rest->body[0]) && (string)$rest->body[0] !== '') ? (string)$rest->body[0] : 'US';
+	}
 
 	/**
 	* Put a bucket
 	*
 	* @param string $bucket Bucket name
 	* @param constant $acl ACL flag
+	* @param string $location Set as "EU" to create buckets hosted in Europe
 	* @return boolean
 	*/
-	public function putBucket($bucket, $acl = self::ACL_PRIVATE) {
+	public function putBucket($bucket, $acl = self::ACL_PRIVATE, $location = false) {
 		$rest = new S3Request('PUT', $bucket, '');
 		$rest->setAmzHeader('x-amz-acl', $acl);
+
+		if ($location !== false) {
+			$dom = new DOMDocument;
+			$createBucketConfiguration = $dom->createElement('CreateBucketConfiguration');
+			$locationConstraint = $dom->createElement('LocationConstraint', strtoupper($location));
+			$createBucketConfiguration->appendChild($locationConstraint);
+			$dom->appendChild($createBucketConfiguration);
+			$rest->data = $dom->saveXML();
+			$rest->size = strlen($rest->data);
+			$rest->setHeader('Content-Type', 'application/xml');
+		}
 		$rest = $rest->getResponse();
+
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			trigger_error(sprintf("S3::putBucket({$bucket}): [%s] %s",
+			trigger_error(sprintf("S3::putBucket({$bucket}, {$acl}, {$location}): [%s] %s",
 			$rest->error['code'], $rest->error['message']), E_USER_WARNING);
 			return false;
 		}
@@ -807,6 +838,7 @@ final class S3Request {
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, false);
 		curl_setopt($curl, CURLOPT_WRITEFUNCTION, array(&$this, '__responseWriteCallback'));
 		curl_setopt($curl, CURLOPT_HEADERFUNCTION, array(&$this, '__responseHeaderCallback'));
+		curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
 
 		// Request types
 		switch ($this->verb) {
