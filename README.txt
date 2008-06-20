@@ -20,11 +20,9 @@ Put an object from a string:
 	Legacy function: $s3->putObjectString($string, $bucketName, $uploadName, S3::ACL_PUBLIC_READ)
 
 
-
 Put an object from a file:
 	$s3->putObject($s3->inputFile($file, false), $bucketName, $uploadName, S3::ACL_PUBLIC_READ)
 	Legacy function: $s3->putObjectFile($uploadFile, $bucketName, $uploadName, S3::ACL_PUBLIC_READ)
-
 
 
 Put an object from a resource (buffer/file size is required):
@@ -32,20 +30,20 @@ Put an object from a resource (buffer/file size is required):
 	$s3->putObject($s3->inputResource(fopen($file, 'rb'), filesize($file)), $bucketName, $uploadName, S3::ACL_PUBLIC_READ)
 
 
-
 Get an object:
 	$s3->getObject($bucketName, $uploadName)
-
 
 
 Save an object to file:
 	$s3->getObject($bucketName, $uploadName, $saveName)
 
 
-
 Save an object to a resource of any type:
 	$s3->getObject($bucketName, $uploadName, fopen('savefile.txt', 'wb'))
 
+
+Copy an object:
+	$s3->copyObject($srcBucket, $srcName, $bucketName, $saveName)
 
 
 Delete an object:
@@ -63,10 +61,15 @@ Get a list of buckets:
 
 Create a public-read bucket:
 	$s3->putBucket($bucketName, S3::ACL_PUBLIC_READ)
+	$s3->putBucket($bucketName, S3::ACL_PUBLIC_READ, 'EU') // EU-hosted bucket
 
 
 Get the contents of a bucket:
 	$s3->getBucket($bucketName)
+
+
+Get a bucket's location:
+	$s3->getBucketLocation($bucketName)
 
 
 Delete a bucket:

@@ -30,7 +30,7 @@
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.3.0
+* @version 0.3.1
 */
 class S3 {
 	// ACL flags
@@ -178,7 +178,7 @@ class S3 {
 	* @param string $location Set as "EU" to create buckets hosted in Europe
 	* @return boolean
 	*/
-	public function putBucket($bucket, $acl = self::ACL_PRIVATE, $location = false) {
+	public static function putBucket($bucket, $acl = self::ACL_PRIVATE, $location = false) {
 		$rest = new S3Request('PUT', $bucket, '');
 		$rest->setAmzHeader('x-amz-acl', $acl);
 
@@ -211,7 +211,7 @@ class S3 {
 	* @param string $bucket Bucket name
 	* @return boolean
 	*/
-	public function deleteBucket($bucket = '') {
+	public static function deleteBucket($bucket = '') {
 		$rest = new S3Request('DELETE', $bucket);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 204)
@@ -356,7 +356,7 @@ class S3 {
 	* @param string $contentType Content type
 	* @return boolean
 	*/
-	public function putObjectString($string, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $contentType = 'text/plain') {
+	public static function putObjectString($string, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $contentType = 'text/plain') {
 		return self::putObject($string, $bucket, $uri, $acl, $metaHeaders, $contentType);
 	}
 
@@ -513,9 +513,9 @@ class S3 {
 	* Get a bucket's location
 	*
 	* @param string $bucket Bucket name
-	* @return mixed
+	* @return string | false
 	*/
-	public function getBucketLocation($bucket) {
+	public static function getBucketLocation($bucket) {
 		$rest = new S3Request('GET', $bucket, '');
 		$rest->setParameter('location', null);
 		$rest = $rest->getResponse();
