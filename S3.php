@@ -30,7 +30,7 @@
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.2.9
+* @version 0.3.0
 */
 class S3 {
 	// ACL flags
@@ -134,7 +134,7 @@ class S3 {
 			foreach ($response->body->Contents as $c) {
 				$results[(string)$c->Key] = array(
 					'name' => (string)$c->Key,
-					'time' => strToTime((string)$c->LastModified),
+					'time' => strtotime((string)$c->LastModified),
 					'size' => (int)$c->Size,
 					'hash' => substr((string)$c->ETag, 1, -1)
 				);
@@ -158,7 +158,7 @@ class S3 {
 				foreach ($response->body->Contents as $c) {
 					$results[(string)$c->Key] = array(
 						'name' => (string)$c->Key,
-						'time' => strToTime((string)$c->LastModified),
+						'time' => strtotime((string)$c->LastModified),
 						'size' => (int)$c->Size,
 						'hash' => substr((string)$c->ETag, 1, -1)
 					);
@@ -169,24 +169,6 @@ class S3 {
 		return $results;
 	}
 
-	/**
-	* Get a bucket's location
-	*
-	* @param string $bucket Bucket name
-	* @return mixed
-	*/
-	public function getBucketLocation($bucket) {
-		$rest = new S3Request('GET', $bucket, '');
-		$rest->setParameter('location', null);
-		$rest = $rest->getResponse();
-		if ($rest->error === false && $rest->code !== 200)
-			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
-		if ($rest->error !== false) {
-			trigger_error(sprintf("S3::getBucketLocation({$bucket}): [%s] %s", $rest->error['code'], $rest->error['message']), E_USER_WARNING);
-			return false;
-		}
-		return (isset($rest->body[0]) && (string)$rest->body[0] !== '') ? (string)$rest->body[0] : 'US';
-	}
 
 	/**
 	* Put a bucket
@@ -433,6 +415,33 @@ class S3 {
 
 
 	/**
+	* Copy an object
+	*
+	* @param string $bucket Source bucket name
+	* @param string $uri Source object URI
+	* @param string $bucket Destination bucket name
+	* @param string $uri Destination object URI
+	* @return mixed | false
+	*/
+	public static function copyObject($srcBucket, $srcUri, $bucket, $uri) {
+		$rest = new S3Request('PUT', $bucket, $uri);
+		$rest->setAmzHeader('x-amz-copy-source', sprintf('/%s/%s', $srcBucket, $srcUri));
+		$rest = $rest->getResponse();
+		if ($rest->error === false && $rest->code !== 200)
+			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
+		if ($rest->error !== false) {
+			trigger_error(sprintf("S3::copyObject({$srcBucket}, {$srcUri}, {$bucket}, {$uri}): [%s] %s",
+			$rest->error['code'], $rest->error['message']), E_USER_WARNING);
+			return false;
+		}
+		return isset($rest->body->LastModified, $rest->body->ETag) ? array(
+			'time' => strtotime((string)$rest->body->LastModified),
+			'hash' => substr((string)$rest->body->ETag, 1, -1)
+		) : false;
+	}
+
+
+	/**
 	* Set logging for a bucket
 	*
 	* @param string $bucket Bucket name
@@ -497,6 +506,26 @@ class S3 {
 			'targetBucket' => (string)$rest->body->LoggingEnabled->TargetBucket,
 			'targetPrefix' => (string)$rest->body->LoggingEnabled->TargetPrefix,
 		);
+	}
+
+
+	/**
+	* Get a bucket's location
+	*
+	* @param string $bucket Bucket name
+	* @return mixed
+	*/
+	public function getBucketLocation($bucket) {
+		$rest = new S3Request('GET', $bucket, '');
+		$rest->setParameter('location', null);
+		$rest = $rest->getResponse();
+		if ($rest->error === false && $rest->code !== 200)
+			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
+		if ($rest->error !== false) {
+			trigger_error(sprintf("S3::getBucketLocation({$bucket}): [%s] %s", $rest->error['code'], $rest->error['message']), E_USER_WARNING);
+			return false;
+		}
+		return (isset($rest->body[0]) && (string)$rest->body[0] !== '') ? (string)$rest->body[0] : 'US';
 	}
 
 
