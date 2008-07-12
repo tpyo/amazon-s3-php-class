@@ -38,6 +38,8 @@ class S3 {
 	const ACL_PUBLIC_READ = 'public-read';
 	const ACL_PUBLIC_READ_WRITE = 'public-read-write';
 
+	public static $useSSL = true;
+
 	private static $__accessKey; // AWS Access key
 	private static $__secretKey; // AWS Secret key
 
@@ -47,11 +49,13 @@ class S3 {
 	*
 	* @param string $accessKey Access key
 	* @param string $secretKey Secret key
+	* @param boolean $useSSL Whether or not to use SSL
 	* @return void
 	*/
-	public function __construct($accessKey = null, $secretKey = null) {
+	public function __construct($accessKey = null, $secretKey = null, $useSSL = true) {
 		if ($accessKey !== null && $secretKey !== null)
 			self::setAuth($accessKey, $secretKey);
+		self::$useSSL = $useSSL;
 	}
 
 
@@ -270,10 +274,10 @@ class S3 {
 	* @param string $uri Object URI
 	* @param constant $acl ACL constant
 	* @param array $metaHeaders Array of x-amz-meta-* headers
-	* @param string $contentType Content type
+	* @param mixed $requestHeaders Array of request headers or content type as a string
 	* @return boolean
 	*/
-	public static function putObject($input, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $contentType = null) {
+	public static function putObject($input, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array()) {
 		if ($input == false) return false;
 		$rest = new S3Request('PUT', $bucket, $uri);
 
@@ -299,16 +303,24 @@ class S3 {
 			elseif (isset($input['data']))
 				$rest->size = strlen($input['data']);
 		}
+		
+		// Custom request headers (Content-Type, Content-Disposition, Content-Encoding)
+		if (is_array($requestHeaders))
+			foreach ($requestHeaders as $h => $v) $rest->setHeader($h, $v);
+		elseif (is_string($requestHeaders)) // Support for legacy contentType parameter
+			$input['type'] = $requestHeaders;
 
 		// Content-Type
-		if ($contentType !== null)
-			$input['type'] = $contentType;
-		elseif (!isset($input['type']) && isset($input['file']))
-			$input['type'] = self::__getMimeType($input['file']);
-		else
-			$input['type'] = 'application/octet-stream';
+		if (!isset($input['type'])) {
+			if (isset($requestHeaders['Content-Type']))
+				$input['type'] =& $requestHeaders['Content-Type'];
+			elseif (isset($input['file']))
+				$input['type'] = self::__getMimeType($input['file']);
+			else
+				$input['type'] = 'application/octet-stream';
+		}
 
-		// We need to post with the content-length and content-type, MD5 is optional
+		// We need to post with Content-Length and Content-Type, MD5 is optional
 		if ($rest->size > 0 && ($rest->fp !== false || $rest->data !== false)) {
 			$rest->setHeader('Content-Type', $input['type']);
 			if (isset($input['md5sum'])) $rest->setHeader('Content-MD5', $input['md5sum']);
@@ -341,7 +353,7 @@ class S3 {
 	* @return boolean
 	*/
 	public static function putObjectFile($file, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $contentType = null) {
-		return self::putObject(S3::inputFile($file), $bucket, $uri, $acl, $metaHeaders, $contentType);
+		return self::putObject(self::inputFile($file), $bucket, $uri, $acl, $metaHeaders, $contentType);
 	}
 
 
@@ -825,11 +837,13 @@ final class S3Request {
 
 			if (array_key_exists('acl', $this->parameters) ||
 			array_key_exists('location', $this->parameters) ||
-			array_key_exists('torrent', $this->parameters))
+			array_key_exists('torrent', $this->parameters) ||
+			array_key_exists('logging', $this->parameters))
 				$this->resource .= $query;
 
 		}
-		$url = (extension_loaded('openssl')?'https://':'http://').$this->headers['Host'].$this->uri;
+		$url = ((S3::$useSSL && extension_loaded('openssl')) ?
+		'https://':'http://').$this->headers['Host'].$this->uri;
 		//var_dump($this->bucket, $this->uri, $this->resource, $url);
 
 		// Basic setup
@@ -845,6 +859,8 @@ final class S3Request {
 			if (strlen($value) > 0) $headers[] = $header.': '.$value;
 		foreach ($this->headers as $header => $value)
 			if (strlen($value) > 0) $headers[] = $header.': '.$value;
+		
+		// Collect AMZ headers for signature
 		foreach ($this->amzHeaders as $header => $value)
 			if (strlen($value) > 0) $amz[] = strToLower($header).':'.$value;
 
