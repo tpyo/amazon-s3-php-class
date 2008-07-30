@@ -30,7 +30,7 @@
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.3.1
+* @version 0.3.3
 */
 class S3 {
 	// ACL flags
@@ -116,13 +116,15 @@ class S3 {
 	* @param string $prefix Prefix
 	* @param string $marker Marker (last file listed)
 	* @param string $maxKeys Max keys (maximum number of keys to return)
+	* @param string $delimiter Delimiter
 	* @return array | false
 	*/
-	public static function getBucket($bucket, $prefix = null, $marker = null, $maxKeys = null) {
+	public static function getBucket($bucket, $prefix = null, $marker = null, $maxKeys = null, $delimiter = null) {
 		$rest = new S3Request('GET', $bucket, '');
 		if ($prefix !== null && $prefix !== '') $rest->setParameter('prefix', $prefix);
-		if ($marker !== null && $prefix !== '') $rest->setParameter('marker', $marker);
-		if ($maxKeys !== null && $prefix !== '') $rest->setParameter('max-keys', $maxKeys);
+		if ($marker !== null && $marker !== '') $rest->setParameter('marker', $marker);
+		if ($maxKeys !== null && $maxKeys !== '') $rest->setParameter('max-keys', $maxKeys);
+		if ($delimiter !== null && $delimiter !== '') $rest->setParameter('delimiter', $delimiter);
 		$response = $rest->getResponse();
 		if ($response->error === false && $response->code !== 200)
 			$response->error = array('code' => $response->code, 'message' => 'Unexpected HTTP status');
