@@ -2,7 +2,7 @@
 /**
 * $Id$
 *
-* Copyright (c) 2007, Donovan Schonknecht.  All rights reserved.
+* Copyright (c) 2007-2008, Donovan Schonknecht.  All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
@@ -30,7 +30,7 @@
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.3.3
+* @version 0.3.4
 */
 class S3 {
 	// ACL flags
@@ -217,7 +217,7 @@ class S3 {
 	* @param string $bucket Bucket name
 	* @return boolean
 	*/
-	public static function deleteBucket($bucket = '') {
+	public static function deleteBucket($bucket) {
 		$rest = new S3Request('DELETE', $bucket);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 204)
@@ -297,7 +297,7 @@ class S3 {
 			$rest->data = $input['data'];
 
 		// Content-Length (required)
-		if (isset($input['size']) && $input['size'] > 0)
+		if (isset($input['size']) && $input['size'] > -1)
 			$rest->size = $input['size'];
 		else {
 			if (isset($input['file']))
@@ -305,7 +305,7 @@ class S3 {
 			elseif (isset($input['data']))
 				$rest->size = strlen($input['data']);
 		}
-		
+
 		// Custom request headers (Content-Type, Content-Disposition, Content-Encoding)
 		if (is_array($requestHeaders))
 			foreach ($requestHeaders as $h => $v) $rest->setHeader($h, $v);
@@ -383,7 +383,7 @@ class S3 {
 	* @param mixed &$saveTo Filename or resource to write to
 	* @return mixed
 	*/
-	public static function getObject($bucket = '', $uri = '', $saveTo = false) {
+	public static function getObject($bucket, $uri = '', $saveTo = false) {
 		$rest = new S3Request('GET', $bucket, $uri);
 		if ($saveTo !== false) {
 			if (is_resource($saveTo))
@@ -414,7 +414,7 @@ class S3 {
 	* @param boolean $returnInfo Return response information
 	* @return mixed | false
 	*/
-	public static function getObjectInfo($bucket = '', $uri = '', $returnInfo = true) {
+	public static function getObjectInfo($bucket, $uri = '', $returnInfo = true) {
 		$rest = new S3Request('HEAD', $bucket, $uri);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && ($rest->code !== 200 && $rest->code !== 404))
@@ -504,7 +504,7 @@ class S3 {
 	* @param string $bucket Bucket name
 	* @return array | false
 	*/
-	public static function getBucketLogging($bucket = '') {
+	public static function getBucketLogging($bucket) {
 		$rest = new S3Request('GET', $bucket, '');
 		$rest->setParameter('logging', null);
 		$rest = $rest->getResponse();
@@ -667,7 +667,7 @@ class S3 {
 	* @param string $uri Object URI
 	* @return mixed
 	*/
-	public static function deleteObject($bucket = '', $uri = '') {
+	public static function deleteObject($bucket, $uri) {
 		$rest = new S3Request('DELETE', $bucket, $uri);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 204)
@@ -698,13 +698,13 @@ class S3 {
 				$type = explode(' ', str_replace('; charset=', ';charset=', $type));
 				$type = array_pop($type);
 				$type = explode(';', $type);
-				$type = array_shift($type);
+				$type = trim(array_shift($type));
 			}
 			finfo_close($finfo);
 
 		// If anyone is still using mime_content_type()
 		} elseif (function_exists('mime_content_type'))
-			$type = mime_content_type($file);
+			$type = trim(mime_content_type($file));
 
 		if ($type !== false && strlen($type) > 0) return $type;
 
@@ -769,15 +769,11 @@ final class S3Request {
 		$this->uri = $uri !== '' ? '/'.$uri : '/';
 
 		if ($this->bucket !== '') {
-			$this->bucket = explode('/', $this->bucket);
-			$this->resource = '/'.$this->bucket[0].$this->uri;
-			$this->headers['Host'] = $this->bucket[0].'.s3.amazonaws.com';
-			$this->bucket = implode('/', $this->bucket);
+			$this->resource = '/'.$this->bucket.$this->uri;
+			$this->headers['Host'] = $this->bucket.'.s3.amazonaws.com';
 		} else {
 			$this->headers['Host'] = 's3.amazonaws.com';
-			if (strlen($this->uri) > 1)
-				$this->resource = '/'.$this->bucket.$this->uri;
-			else $this->resource = $this->uri;
+			$this->resource = strlen($this->uri) > 1 ? '/'.$this->bucket.$this->uri : $this->uri;
 		}
 		$this->headers['Date'] = gmdate('D, d M Y H:i:s T');
 
@@ -836,7 +832,7 @@ final class S3Request {
 				else $query .= $var.'='.$value.'&';
 			$query = substr($query, 0, -1);
 			$this->uri .= $query;
-
+			
 			if (array_key_exists('acl', $this->parameters) ||
 			array_key_exists('location', $this->parameters) ||
 			array_key_exists('torrent', $this->parameters) ||
