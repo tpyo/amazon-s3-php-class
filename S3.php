@@ -24,13 +24,16 @@
 * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 * POSSIBILITY OF SUCH DAMAGE.
+*
+* If you find this software useful please consider making a donation:
+* http://www.pledgie.com/campaigns/1728
 */
 
 /**
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.3.4
+* @version 0.3.5
 */
 class S3 {
 	// ACL flags
@@ -49,7 +52,7 @@ class S3 {
 	*
 	* @param string $accessKey Access key
 	* @param string $secretKey Secret key
-	* @param boolean $useSSL Whether or not to use SSL
+	* @param boolean $useSSL Enable SSL
 	* @return void
 	*/
 	public function __construct($accessKey = null, $secretKey = null, $useSSL = true) {
@@ -435,10 +438,12 @@ class S3 {
 	* @param string $uri Source object URI
 	* @param string $bucket Destination bucket name
 	* @param string $uri Destination object URI
+	* @param constant $acl ACL constant
 	* @return mixed | false
 	*/
-	public static function copyObject($srcBucket, $srcUri, $bucket, $uri) {
+	public static function copyObject($srcBucket, $srcUri, $bucket, $uri, $acl = self::ACL_PRIVATE) {
 		$rest = new S3Request('PUT', $bucket, $uri);
+		$rest->setAmzHeader('x-amz-acl', $acl);
 		$rest->setAmzHeader('x-amz-copy-source', sprintf('/%s/%s', $srcBucket, $srcUri));
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
@@ -681,6 +686,22 @@ class S3 {
 
 
 	/**
+	* Get a query string authenticated URL
+	*
+	* @param string $bucket Bucket name
+	* @param string $uri Object URI
+	* @param integer $lifetime Lifetime in seconds
+	* @param boolean $hostBucket Use the bucket name as the hostname
+	* @return string
+	*/
+	public static function getAuthenticatedURL($bucket, $uri, $lifetime, $hostBucket = false) {
+		$expires = time() + $lifetime;
+		return sprintf("http://%s/%s?AWSAccessKeyId=%s&Expires=%u&Signature=%s", $hostBucket ? $bucket : $bucket.'.s3.amazonaws.com',
+		$uri, self::$__accessKey, $expires, urlencode(self::__getHash("GET\n\n\n{$expires}\n/{$bucket}/{$uri}")));
+	}
+
+
+	/**
 	* Get MIME type for file
 	*
 	* @internal Used to get mime types
@@ -730,20 +751,31 @@ class S3 {
 	/**
 	* Generate the auth string: "AWS AccessKey:Signature"
 	*
-	* This uses the hash extension if loaded
-	*
-	* @internal Signs the request
+	* @internal Used by S3Request::getResponse()
 	* @param string $string String to sign
 	* @return string
 	*/
 	public static function __getSignature($string) {
-		return 'AWS '.self::$__accessKey.':'.base64_encode(extension_loaded('hash') ?
+		return 'AWS '.self::$__accessKey.':'.self::__getHash($string);
+	}
+
+
+	/**
+	* Creates a HMAC-SHA1 hash
+	*
+	* This uses the hash extension if loaded
+	*
+	* @internal Used by __getSignature()
+	* @param string $string String to sign
+	* @return string
+	*/
+	private static function __getHash($string) {
+		return base64_encode(extension_loaded('hash') ?
 		hash_hmac('sha1', $string, self::$__secretKey, true) : pack('H*', sha1(
 		(str_pad(self::$__secretKey, 64, chr(0x00)) ^ (str_repeat(chr(0x5c), 64))) .
 		pack('H*', sha1((str_pad(self::$__secretKey, 64, chr(0x00)) ^
 		(str_repeat(chr(0x36), 64))) . $string)))));
 	}
-
 
 }
 
@@ -847,8 +879,11 @@ final class S3Request {
 		// Basic setup
 		$curl = curl_init();
 		curl_setopt($curl, CURLOPT_USERAGENT, 'S3/php');
-		curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
-		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
+
+		if (S3::$useSSL) {
+			curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 1);
+			curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 1);
+		}
 		curl_setopt($curl, CURLOPT_URL, $url);
 
 		// Headers
