@@ -2,7 +2,7 @@
 /**
 * $Id$
 *
-* Copyright (c) 2007-2008, Donovan Schonknecht.  All rights reserved.
+* Copyright (c) 2008, Donovan Schönknecht.  All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
@@ -25,15 +25,14 @@
 * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 * POSSIBILITY OF SUCH DAMAGE.
 *
-* If you find this software useful please consider making a donation:
-* http://www.pledgie.com/campaigns/1728
+* Amazon S3 is a trademark of Amazon.com, Inc. or its affiliates.
 */
 
 /**
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.3.5
+* @version 0.3.6
 */
 class S3 {
 	// ACL flags
@@ -48,7 +47,7 @@ class S3 {
 
 
 	/**
-	* Constructor, used if you're not calling the class statically
+	* Constructor - if you're not using the class statically
 	*
 	* @param string $accessKey Access key
 	* @param string $secretKey Secret key
@@ -63,7 +62,7 @@ class S3 {
 
 
 	/**
-	* Set access information
+	* Set AWS access key and secret key
 	*
 	* @param string $accessKey Access key
 	* @param string $secretKey Secret key
@@ -253,9 +252,9 @@ class S3 {
 
 
 	/**
-	* Use a resource for input
+	* Create input array info for putObject() with a resource
 	*
-	* @param string $file Input file
+	* @param string $resource Input resource to read from
 	* @param integer $bufferSize Input byte size
 	* @param string $md5sum MD5 hash to send (optional)
 	* @return array | false
@@ -279,7 +278,7 @@ class S3 {
 	* @param string $uri Object URI
 	* @param constant $acl ACL constant
 	* @param array $metaHeaders Array of x-amz-meta-* headers
-	* @param mixed $requestHeaders Array of request headers or content type as a string
+	* @param array $requestHeaders Array of request headers or content type as a string
 	* @return boolean
 	*/
 	public static function putObject($input, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array()) {
@@ -347,7 +346,7 @@ class S3 {
 
 
 	/**
-	* Puts an object from a file (legacy function)
+	* Put an object from a file (legacy function)
 	*
 	* @param string $file Input file path
 	* @param string $bucket Bucket name
@@ -383,10 +382,10 @@ class S3 {
 	*
 	* @param string $bucket Bucket name
 	* @param string $uri Object URI
-	* @param mixed &$saveTo Filename or resource to write to
+	* @param mixed $saveTo Filename or resource to write to
 	* @return mixed
 	*/
-	public static function getObject($bucket, $uri = '', $saveTo = false) {
+	public static function getObject($bucket, $uri, $saveTo = false) {
 		$rest = new S3Request('GET', $bucket, $uri);
 		if ($saveTo !== false) {
 			if (is_resource($saveTo))
@@ -417,7 +416,7 @@ class S3 {
 	* @param boolean $returnInfo Return response information
 	* @return mixed | false
 	*/
-	public static function getObjectInfo($bucket, $uri = '', $returnInfo = true) {
+	public static function getObjectInfo($bucket, $uri, $returnInfo = true) {
 		$rest = new S3Request('HEAD', $bucket, $uri);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && ($rest->code !== 200 && $rest->code !== 404))
@@ -541,7 +540,8 @@ class S3 {
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			trigger_error(sprintf("S3::getBucketLocation({$bucket}): [%s] %s", $rest->error['code'], $rest->error['message']), E_USER_WARNING);
+			trigger_error(sprintf("S3::getBucketLocation({$bucket}): [%s] %s",
+			$rest->error['code'], $rest->error['message']), E_USER_WARNING);
 			return false;
 		}
 		return (isset($rest->body[0]) && (string)$rest->body[0] !== '') ? (string)$rest->body[0] : 'US';
@@ -678,7 +678,8 @@ class S3 {
 		if ($rest->error === false && $rest->code !== 204)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			trigger_error(sprintf("S3::deleteObject(): [%s] %s", $rest->error['code'], $rest->error['message']), E_USER_WARNING);
+			trigger_error(sprintf("S3::deleteObject(): [%s] %s",
+			$rest->error['code'], $rest->error['message']), E_USER_WARNING);
 			return false;
 		}
 		return true;
@@ -864,7 +865,7 @@ final class S3Request {
 				else $query .= $var.'='.$value.'&';
 			$query = substr($query, 0, -1);
 			$this->uri .= $query;
-			
+
 			if (array_key_exists('acl', $this->parameters) ||
 			array_key_exists('location', $this->parameters) ||
 			array_key_exists('torrent', $this->parameters) ||
@@ -892,7 +893,7 @@ final class S3Request {
 			if (strlen($value) > 0) $headers[] = $header.': '.$value;
 		foreach ($this->headers as $header => $value)
 			if (strlen($value) > 0) $headers[] = $header.': '.$value;
-		
+
 		// Collect AMZ headers for signature
 		foreach ($this->amzHeaders as $header => $value)
 			if (strlen($value) > 0) $amz[] = strToLower($header).':'.$value;
