@@ -73,20 +73,23 @@ if ($s3->putBucket($bucketName, S3::ACL_PUBLIC_READ)) {
 		// $acp = $s3->getAccessControlPolicy($bucketName);
 		// echo "S3::getAccessControlPolicy(): {$bucketName}: ".print_r($acp, 1);
 
-		// Update an access control policy ($acp should be the data returned by S3::getAccessControlPolicy())
+		// Update an access control policy ($acp should be the same as the data returned by S3::getAccessControlPolicy())
 		// $s3->setAccessControlPolicy($bucketName, '', $acp);
 		// $acp = $s3->getAccessControlPolicy($bucketName);
 		// echo "S3::getAccessControlPolicy(): {$bucketName}: ".print_r($acp, 1);
 
 
-		// Enable logging for a bucket (remember, logbucket must be writable by the log group too):
-		// $s3->enableBucketLogging($bucketName, 'logbucket', 'prefix');
+		// Enable logging for a bucket:
+		// $s3->setBucketLogging($bucketName, 'logbucket', 'prefix');
 
 		// if (($logging = $s3->getBucketLogging($bucketName)) !== false) {
 		// 	echo "S3::getBucketLogging(): Logging for {$bucketName}: ".print_r($contents, 1);
 		// } else {
 		// 	echo "S3::getBucketLogging(): Logging for {$bucketName} not enabled\n";
 		// }
+
+		// Disable bucket logging:
+		// var_dump($s3->disableBucketLogging($bucketName));
 
 
 		// Delete our file
