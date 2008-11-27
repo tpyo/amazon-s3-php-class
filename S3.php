@@ -767,7 +767,7 @@ class S3 {
 	* @return array | false
 	*/
 	public static function getDistribution($distributionId) {
-		S3::$useSSL = true; // CloudFront requires SSL
+		self::$useSSL = true; // CloudFront requires SSL
 		$rest = new S3Request('GET', '', '2008-06-30/distribution/'.$distributionId, 'cloudfront.amazonaws.com');
 		$rest = self::__getCloudFrontResponse($rest);
 
@@ -793,7 +793,7 @@ class S3 {
 	* @return array | false
 	*/
 	public static function updateDistribution($dist) {
-		S3::$useSSL = true; // CloudFront requires SSL
+		self::$useSSL = true; // CloudFront requires SSL
 		$rest = new S3Request('PUT', '', '2008-06-30/distribution/'.$dist['id'].'/config', 'cloudfront.amazonaws.com');
 		$rest->data = self::__getCloudFrontDistributionConfigXML($dist['origin'], $dist['enabled'], $dist['comment'], $dist['callerReference'], $dist['cnames']);
 		$rest->size = strlen($rest->data);
@@ -822,7 +822,7 @@ class S3 {
 	* @return boolean
 	*/
 	public static function deleteDistribution($dist) {
-		S3::$useSSL = true; // CloudFront requires SSL
+		self::$useSSL = true; // CloudFront requires SSL
 		$rest = new S3Request('DELETE', '', '2008-06-30/distribution/'.$dist['id'], 'cloudfront.amazonaws.com');
 		$rest->setHeader('If-Match', $dist['hash']);
 		$rest = self::__getCloudFrontResponse($rest);
@@ -844,7 +844,7 @@ class S3 {
 	* @return array
 	*/
 	public static function listDistributions() {
-		S3::$useSSL = true; // CloudFront requires SSL
+		self::$useSSL = true; // CloudFront requires SSL
 		$rest = new S3Request('GET', '', '2008-06-30/distribution', 'cloudfront.amazonaws.com');
 		$rest = self::__getCloudFrontResponse($rest);
 
