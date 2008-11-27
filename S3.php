@@ -751,7 +751,7 @@ class S3 {
 		if ($rest->error === false && $rest->code !== 201)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			trigger_error(sprintf("CloudFront::createDistribution({$bucket}, ".(int)$enabled.", '$comment'): [%s] %s",
+			trigger_error(sprintf("S3::createDistribution({$bucket}, ".(int)$enabled.", '$comment'): [%s] %s",
 			$rest->error['code'], $rest->error['message']), E_USER_WARNING);
 			return false;
 		} elseif ($rest->body instanceof SimpleXMLElement)
@@ -774,7 +774,7 @@ class S3 {
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			trigger_error(sprintf("CloudFront::getDistribution($distributionId): [%s] %s",
+			trigger_error(sprintf("S3::getDistribution($distributionId): [%s] %s",
 			$rest->error['code'], $rest->error['message']), E_USER_WARNING);
 			return false;
 		} elseif ($rest->body instanceof SimpleXMLElement) {
@@ -803,7 +803,7 @@ class S3 {
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			trigger_error(sprintf("CloudFront::updateDistribution({$dist['id']}, ".(int)$enabled.", '$comment'): [%s] %s",
+			trigger_error(sprintf("S3::updateDistribution({$dist['id']}, ".(int)$enabled.", '$comment'): [%s] %s",
 			$rest->error['code'], $rest->error['message']), E_USER_WARNING);
 			return false;
 		} else {
@@ -830,7 +830,7 @@ class S3 {
 		if ($rest->error === false && $rest->code !== 204)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			trigger_error(sprintf("CloudFront::deleteDistribution({$dist['id']}): [%s] %s",
+			trigger_error(sprintf("S3::deleteDistribution({$dist['id']}): [%s] %s",
 			$rest->error['code'], $rest->error['message']), E_USER_WARNING);
 			return false;
 		}
@@ -851,7 +851,7 @@ class S3 {
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false) {
-			trigger_error(sprintf("CloudFront::listDistributions(): [%s] %s",
+			trigger_error(sprintf("S3::listDistributions(): [%s] %s",
 			$rest->error['code'], $rest->error['message']), E_USER_WARNING);
 			return false;
 		} elseif ($rest->body instanceof SimpleXMLElement && isset($rest->body->DistributionSummary)) {
