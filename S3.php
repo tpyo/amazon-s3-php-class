@@ -137,8 +137,42 @@ class S3 {
 
 		$results = array();
 
-		$lastMarker = null;
+		$nextMarker = null;
 		if (isset($response->body, $response->body->Contents))
+		foreach ($response->body->Contents as $c) {
+			$results[(string)$c->Key] = array(
+				'name' => (string)$c->Key,
+				'time' => strtotime((string)$c->LastModified),
+				'size' => (int)$c->Size,
+				'hash' => substr((string)$c->ETag, 1, -1)
+			);
+			$nextMarker = (string)$c->Key;
+		}
+
+		if (isset($response->body, $response->body->CommonPrefixes))
+		foreach ($response->body->CommonPrefixes as $c) {
+			$results[(string)$c->Prefix] = array(
+				'prefix' => (string)$c->Prefix
+			);
+		}
+
+		if (isset($response->body, $response->body->IsTruncated) &&
+		(string)$response->body->IsTruncated == 'false') return $results;
+
+		if (isset($response->body, $response->body->NextMarker))
+			$nextMarker = (string)$response->body->NextMarker;
+
+		// Loop through truncated results if maxKeys isn't specified
+		if ($maxKeys == null && $nextMarker !== null && (string)$response->body->IsTruncated == 'true')
+		do {
+			$rest = new S3Request('GET', $bucket, '');
+			if ($prefix !== null && $prefix !== '') $rest->setParameter('prefix', $prefix);
+			$rest->setParameter('marker', $nextMarker);
+			if ($delimiter !== null && $delimiter !== '') $rest->setParameter('delimiter', $delimiter);
+
+			if (($response = $rest->getResponse(true)) == false || $response->code !== 200) break;
+
+			if (isset($response->body, $response->body->Contents))
 			foreach ($response->body->Contents as $c) {
 				$results[(string)$c->Key] = array(
 					'name' => (string)$c->Key,
@@ -146,33 +180,19 @@ class S3 {
 					'size' => (int)$c->Size,
 					'hash' => substr((string)$c->ETag, 1, -1)
 				);
-				$lastMarker = (string)$c->Key;
-				//$response->body->IsTruncated = 'true'; break;
+				$nextMarker = (string)$c->Key;
 			}
 
+			if (isset($response->body, $response->body->CommonPrefixes))
+			foreach ($response->body->CommonPrefixes as $c) {
+				$results[(string)$c->Prefix] = array(
+					'prefix' => (string)$c->Prefix
+				);
+			}
 
-		if (isset($response->body->IsTruncated) &&
-		(string)$response->body->IsTruncated == 'false') return $results;
+			if (isset($response->body, $response->body->NextMarker))
+				$nextMarker = (string)$response->body->NextMarker;
 
-		// Loop through truncated results if maxKeys isn't specified
-		if ($maxKeys == null && $lastMarker !== null && (string)$response->body->IsTruncated == 'true')
-		do {
-			$rest = new S3Request('GET', $bucket, '');
-			if ($prefix !== null && $prefix !== '') $rest->setParameter('prefix', $prefix);
-			$rest->setParameter('marker', $lastMarker);
-			if ($delimiter !== null && $delimiter !== '') $rest->setParameter('delimiter', $delimiter);
-
-			if (($response = $rest->getResponse(true)) == false || $response->code !== 200) break;
-			if (isset($response->body, $response->body->Contents))
-				foreach ($response->body->Contents as $c) {
-					$results[(string)$c->Key] = array(
-						'name' => (string)$c->Key,
-						'time' => strtotime((string)$c->LastModified),
-						'size' => (int)$c->Size,
-						'hash' => substr((string)$c->ETag, 1, -1)
-					);
-					$lastMarker = (string)$c->Key;
-				}
 		} while ($response !== false && (string)$response->body->IsTruncated == 'true');
 
 		return $results;
