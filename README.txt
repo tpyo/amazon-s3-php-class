@@ -3,13 +3,15 @@ AMAZON S3 PHP CLASS
 
 USING THE CLASS
 
-
 OO method (e,g; $s3->getObject(...)):
 $s3 = new S3(awsAccessKey, awsSecretKey);
 
 Statically (e,g; S3::getObject(...)):
 S3::setAuth(awsAccessKey, awsSecretKey);
 
+
+For class documentation see:
+http://undesigned.org.za/files/s3-class-documentation/index.html
 
 
 OBJECTS
@@ -103,4 +105,3 @@ MORE INFORMATION
 
 
 EOF!
-

@@ -137,42 +137,8 @@ class S3 {
 
 		$results = array();
 
-		$nextMarker = null;
+		$lastMarker = null;
 		if (isset($response->body, $response->body->Contents))
-		foreach ($response->body->Contents as $c) {
-			$results[(string)$c->Key] = array(
-				'name' => (string)$c->Key,
-				'time' => strtotime((string)$c->LastModified),
-				'size' => (int)$c->Size,
-				'hash' => substr((string)$c->ETag, 1, -1)
-			);
-			$nextMarker = (string)$c->Key;
-		}
-
-		if (isset($response->body, $response->body->CommonPrefixes))
-		foreach ($response->body->CommonPrefixes as $c) {
-			$results[(string)$c->Prefix] = array(
-				'prefix' => (string)$c->Prefix
-			);
-		}
-
-		if (isset($response->body, $response->body->IsTruncated) &&
-		(string)$response->body->IsTruncated == 'false') return $results;
-
-		if (isset($response->body, $response->body->NextMarker))
-			$nextMarker = (string)$response->body->NextMarker;
-
-		// Loop through truncated results if maxKeys isn't specified
-		if ($maxKeys == null && $nextMarker !== null && (string)$response->body->IsTruncated == 'true')
-		do {
-			$rest = new S3Request('GET', $bucket, '');
-			if ($prefix !== null && $prefix !== '') $rest->setParameter('prefix', $prefix);
-			$rest->setParameter('marker', $nextMarker);
-			if ($delimiter !== null && $delimiter !== '') $rest->setParameter('delimiter', $delimiter);
-
-			if (($response = $rest->getResponse(true)) == false || $response->code !== 200) break;
-
-			if (isset($response->body, $response->body->Contents))
 			foreach ($response->body->Contents as $c) {
 				$results[(string)$c->Key] = array(
 					'name' => (string)$c->Key,
@@ -180,19 +146,33 @@ class S3 {
 					'size' => (int)$c->Size,
 					'hash' => substr((string)$c->ETag, 1, -1)
 				);
-				$nextMarker = (string)$c->Key;
+				$lastMarker = (string)$c->Key;
+				//$response->body->IsTruncated = 'true'; break;
 			}
 
-			if (isset($response->body, $response->body->CommonPrefixes))
-			foreach ($response->body->CommonPrefixes as $c) {
-				$results[(string)$c->Prefix] = array(
-					'prefix' => (string)$c->Prefix
-				);
-			}
 
-			if (isset($response->body, $response->body->NextMarker))
-				$nextMarker = (string)$response->body->NextMarker;
+		if (isset($response->body->IsTruncated) &&
+		(string)$response->body->IsTruncated == 'false') return $results;
 
+		// Loop through truncated results if maxKeys isn't specified
+		if ($maxKeys == null && $lastMarker !== null && (string)$response->body->IsTruncated == 'true')
+		do {
+			$rest = new S3Request('GET', $bucket, '');
+			if ($prefix !== null && $prefix !== '') $rest->setParameter('prefix', $prefix);
+			$rest->setParameter('marker', $lastMarker);
+			if ($delimiter !== null && $delimiter !== '') $rest->setParameter('delimiter', $delimiter);
+
+			if (($response = $rest->getResponse(true)) == false || $response->code !== 200) break;
+			if (isset($response->body, $response->body->Contents))
+				foreach ($response->body->Contents as $c) {
+					$results[(string)$c->Key] = array(
+						'name' => (string)$c->Key,
+						'time' => strtotime((string)$c->LastModified),
+						'size' => (int)$c->Size,
+						'hash' => substr((string)$c->ETag, 1, -1)
+					);
+					$lastMarker = (string)$c->Key;
+				}
 		} while ($response !== false && (string)$response->body->IsTruncated == 'true');
 
 		return $results;
@@ -742,12 +722,15 @@ class S3 {
 	* @param string $uri Object URI
 	* @param integer $lifetime Lifetime in seconds
 	* @param boolean $hostBucket Use the bucket name as the hostname
+	* @param boolean $https Use HTTPS ($hostBucket should be false for SSL verification)
 	* @return string
 	*/
-	public static function getAuthenticatedURL($bucket, $uri, $lifetime, $hostBucket = false) {
+	public static function getAuthenticatedURL($bucket, $uri, $lifetime, $hostBucket = false, $https = false) {
 		$expires = time() + $lifetime;
-		return sprintf("http://%s/%s?AWSAccessKeyId=%s&Expires=%u&Signature=%s", $hostBucket ? $bucket : $bucket.'.s3.amazonaws.com',
-		$uri, self::$__accessKey, $expires, urlencode(self::__getHash("GET\n\n\n{$expires}\n/{$bucket}/{$uri}")));
+		$uri = str_replace('%2F', '/', rawurlencode($uri)); // URI should be encoded (thanks Sean O'Dea)
+		return sprintf(($https ? 'https' : 'http').'://%s/%s?AWSAccessKeyId=%s&Expires=%u&Signature=%s',
+		$hostBucket ? $bucket : $bucket.'.s3.amazonaws.com', $uri, self::$__accessKey, $expires,
+		urlencode(self::__getHash("GET\n\n\n{$expires}\n/{$bucket}/{$uri}")));
 	}
 
 
@@ -1074,7 +1057,7 @@ final class S3Request {
 	function __construct($verb, $bucket = '', $uri = '', $defaultHost = 's3.amazonaws.com') {
 		$this->verb = $verb;
 		$this->bucket = strtolower($bucket);
-		$this->uri = $uri !== '' ? '/'.$uri : '/';
+		$this->uri = $uri !== '' ? '/'.str_replace('%2F', '/', rawurlencode($uri)) : '/';
 
 		if ($this->bucket !== '') {
 			$this->headers['Host'] = $this->bucket.'.'.$defaultHost;
@@ -1138,7 +1121,8 @@ final class S3Request {
 			$query = substr($this->uri, -1) !== '?' ? '?' : '&';
 			foreach ($this->parameters as $var => $value)
 				if ($value == null || $value == '') $query .= $var.'&';
-				else $query .= $var.'='.$value.'&';
+				// Parameters should be encoded (thanks Sean O'Dea)
+				else $query .= $var.'='.rawurlencode($value).'&';
 			$query = substr($query, 0, -1);
 			$this->uri .= $query;
 
@@ -1147,7 +1131,6 @@ final class S3Request {
 			array_key_exists('torrent', $this->parameters) ||
 			array_key_exists('logging', $this->parameters))
 				$this->resource .= $query;
-
 		}
 		$url = ((S3::$useSSL && extension_loaded('openssl')) ?
 		'https://':'http://').$this->headers['Host'].$this->uri;
