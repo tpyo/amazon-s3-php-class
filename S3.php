@@ -32,7 +32,7 @@
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.3.8
+* @version 0.3.9
 */
 class S3 {
 	// ACL flags
