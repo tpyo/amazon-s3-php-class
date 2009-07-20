@@ -20,6 +20,12 @@ $path = 'myfiles/'; // Can be empty ''
 $lifetime = 3600; // Period for which the parameters are valid
 $maxFileSize = (1024 * 1024 * 50); // 50 MB
 
+$metaHeaders = array('uid' => 123);
+$requestHeaders = array(
+    'Content-Type' => 'application/octet-stream',
+    'Content-Disposition' => 'attachment; filename=${filename}'
+);
+
 $params = S3::getHttpUploadPostParams(
     $bucket,
     $path,
@@ -27,11 +33,9 @@ $params = S3::getHttpUploadPostParams(
     $lifetime,
     $maxFileSize,
     201, // Or a URL to redirect to on success
-    array(),
-    array(
-        'Content-Type' => 'application/octet-stream',
-        'Content-Disposition' => 'attachment; filename=${filename}'
-    )
+    $metaHeaders,
+    $requestHeaders,
+    false // False since we're not using flash
 );
 
 $uploadURL = 'https://' . $bucket . '.s3.amazonaws.com/';
