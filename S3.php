@@ -39,6 +39,7 @@ class S3 {
 	const ACL_PRIVATE = 'private';
 	const ACL_PUBLIC_READ = 'public-read';
 	const ACL_PUBLIC_READ_WRITE = 'public-read-write';
+	const ACL_AUTHENTICATED_READ = 'authenticated-read';
 
 	public static $useSSL = true;
 
@@ -89,7 +90,7 @@ class S3 {
 			trigger_error(sprintf("S3::listBuckets(): [%s] %s", $rest->error['code'], $rest->error['message']), E_USER_WARNING);
 			return false;
 		}
-		$results = array(); //var_dump($rest->body);
+		$results = array();
 		if (!isset($rest->body->Buckets)) return $results;
 
 		if ($detailed) {
@@ -276,7 +277,7 @@ class S3 {
 	* @return array | false
 	*/
 	public static function inputResource(&$resource, $bufferSize, $md5sum = '') {
-		if (!is_resource($resource) || $bufferSize <= 0) {
+		if (!is_resource($resource) || $bufferSize < 0) {
 			trigger_error('S3::inputResource(): Invalid resource or buffer size', E_USER_WARNING);
 			return false;
 		}
@@ -298,7 +299,7 @@ class S3 {
 	* @return boolean
 	*/
 	public static function putObject($input, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array()) {
-		if ($input == false) return false;
+		if ($input === false) return false;
 		$rest = new S3Request('PUT', $bucket, $uri);
 
 		if (is_string($input)) $input = array(
@@ -315,7 +316,7 @@ class S3 {
 			$rest->data = $input['data'];
 
 		// Content-Length (required)
-		if (isset($input['size']) && $input['size'] > -1)
+		if (isset($input['size']) && $input['size'] >= 0)
 			$rest->size = $input['size'];
 		else {
 			if (isset($input['file']))
@@ -341,7 +342,7 @@ class S3 {
 		}
 
 		// We need to post with Content-Length and Content-Type, MD5 is optional
-		if ($rest->size > 0 && ($rest->fp !== false || $rest->data !== false)) {
+		if ($rest->size >= 0 && ($rest->fp !== false || $rest->data !== false)) {
 			$rest->setHeader('Content-Type', $input['type']);
 			if (isset($input['md5sum'])) $rest->setHeader('Content-MD5', $input['md5sum']);
 
@@ -1201,12 +1202,12 @@ final class S3Request {
 				if ($this->fp !== false) {
 					curl_setopt($curl, CURLOPT_PUT, true);
 					curl_setopt($curl, CURLOPT_INFILE, $this->fp);
-					if ($this->size > 0)
+					if ($this->size >= 0)
 						curl_setopt($curl, CURLOPT_INFILESIZE, $this->size);
 				} elseif ($this->data !== false) {
 					curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $this->verb);
 					curl_setopt($curl, CURLOPT_POSTFIELDS, $this->data);
-					if ($this->size > 0)
+					if ($this->size >= 0)
 						curl_setopt($curl, CURLOPT_BUFFERSIZE, $this->size);
 				} else
 					curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $this->verb);
