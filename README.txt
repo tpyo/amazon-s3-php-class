@@ -45,7 +45,7 @@ Save an object to a resource of any type:
 
 
 Copy an object:
-	$s3->copyObject($srcBucket, $srcName, $bucketName, $saveName)
+	$s3->copyObject($srcBucket, $srcName, $bucketName, $saveName, $metaHeaders = array(), $requestHeaders = array())
 
 
 Delete an object:

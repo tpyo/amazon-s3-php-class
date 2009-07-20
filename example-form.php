@@ -11,6 +11,15 @@ if (!class_exists('S3')) require_once 'S3.php';
 if (!defined('awsAccessKey')) define('awsAccessKey', 'change-this');
 if (!defined('awsSecretKey')) define('awsSecretKey', 'change-this');
 
+// Check for CURL
+if (!extension_loaded('curl') && !@dl(PHP_SHLIB_SUFFIX == 'so' ? 'curl.so' : 'php_curl.dll'))
+	exit("\nERROR: CURL extension not loaded\n\n");
+
+// Pointless without your keys!
+if (awsAccessKey == 'change-this' || awsSecretKey == 'change-this')
+	exit("\nERROR: AWS access information required\n\nPlease edit the following lines in this file:\n\n".
+	"define('awsAccessKey', 'change-me');\ndefine('awsSecretKey', 'change-me');\n\n");
+
 
 S3::setAuth(awsAccessKey, awsSecretKey);
 
