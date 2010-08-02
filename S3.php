@@ -32,7 +32,7 @@
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.5.0-beta
+* @version 0.5.0-dev
 */
 class S3
 {
@@ -55,7 +55,7 @@ class S3
 	* @param boolean $useSSL Enable SSL
 	* @return void
 	*/
-	public function __construct($accessKey = null, $secretKey = null, $useSSL = true)
+	public function __construct($accessKey = null, $secretKey = null, $useSSL = false)
 	{
 		if ($accessKey !== null && $secretKey !== null)
 			self::setAuth($accessKey, $secretKey);
@@ -89,6 +89,7 @@ class S3
 		self::$useSSL = ($enabled && extension_loaded('openssl'));
 		self::$useSSLValidation = $validate;
 	}
+
 
 	/**
 	* Set proxy information
