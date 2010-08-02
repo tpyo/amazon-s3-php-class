@@ -32,7 +32,7 @@
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.5.0
+* @version 0.5.0-beta
 */
 class S3
 {
