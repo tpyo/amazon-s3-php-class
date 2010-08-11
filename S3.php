@@ -42,6 +42,9 @@ class S3
 	const ACL_PUBLIC_READ_WRITE = 'public-read-write';
 	const ACL_AUTHENTICATED_READ = 'authenticated-read';
 
+	const STORAGE_CLASS_STANDARD = 'STANDARD';
+	const STORAGE_CLASS_RRS = 'REDUCED_REDUNDANCY';
+
 	public static $useSSL = false, $useSSLValidation = true, $useExceptions = false, $proxy = null;
 
 	private static $__accessKey; // AWS Access key
@@ -370,9 +373,10 @@ class S3
 	* @param constant $acl ACL constant
 	* @param array $metaHeaders Array of x-amz-meta-* headers
 	* @param array $requestHeaders Array of request headers or content type as a string
+	* @param constant $storageClass Storage class constant
 	* @return boolean
 	*/
-	public static function putObject($input, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array())
+	public static function putObject($input, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array(), $storageClass = self::STORAGE_CLASS_STANDARD)
 	{
 		if ($input === false) return false;
 		$rest = new S3Request('PUT', $bucket, $uri);
@@ -415,6 +419,9 @@ class S3
 			else
 				$input['type'] = 'application/octet-stream';
 		}
+
+		if ($storageClass !== self::STORAGE_CLASS_STANDARD) // Storage class
+			$rest->setAmzHeader('x-amz-storage-class', $storageClass);
 
 		// We need to post with Content-Length and Content-Type, MD5 is optional
 		if ($rest->size >= 0 && ($rest->fp !== false || $rest->data !== false))
@@ -543,18 +550,22 @@ class S3
 	* @param constant $acl ACL constant
 	* @param array $metaHeaders Optional array of x-amz-meta-* headers
 	* @param array $requestHeaders Optional array of request headers (content type, disposition, etc.)
+	* @param constant $storageClass Storage class constant
 	* @return mixed | false
 	*/
-	public static function copyObject($srcBucket, $srcUri, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array())
+	public static function copyObject($srcBucket, $srcUri, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array(), $storageClass = self::STORAGE_CLASS_STANDARD)
 	{
 		$rest = new S3Request('PUT', $bucket, $uri);
 		$rest->setHeader('Content-Length', 0);
 		foreach ($requestHeaders as $h => $v) $rest->setHeader($h, $v);
 		foreach ($metaHeaders as $h => $v) $rest->setAmzHeader('x-amz-meta-'.$h, $v);
+		if ($storageClass !== self::STORAGE_CLASS_STANDARD) // Storage class
+			$rest->setAmzHeader('x-amz-storage-class', $storageClass);
 		$rest->setAmzHeader('x-amz-acl', $acl); // Added rawurlencode() for $srcUri (thanks a.yamanoi)
 		$rest->setAmzHeader('x-amz-copy-source', sprintf('/%s/%s', $srcBucket, rawurlencode($srcUri)));
 		if (sizeof($requestHeaders) > 0 || sizeof($metaHeaders) > 0)
 			$rest->setAmzHeader('x-amz-metadata-directive', 'REPLACE');
+
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
@@ -1587,4 +1598,3 @@ class S3Exception extends Exception {
 		$this->line = $line;
 	}
 }
-
