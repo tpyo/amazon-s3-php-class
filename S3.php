@@ -1433,7 +1433,7 @@ final class S3Request
 	{
 		$this->endpoint = $endpoint;
 		$this->verb = $verb;
-		$this->bucket = strtolower($bucket);
+		$this->bucket = $bucket;
 		$this->uri = $uri !== '' ? '/'.str_replace('%2F', '/', rawurlencode($uri)) : '/';
 
 		if ($this->bucket !== '')
