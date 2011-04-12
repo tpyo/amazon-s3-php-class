@@ -1675,7 +1675,9 @@ final class S3Request
 			$this->response->code = (int)substr($data, 9, 3);
 		else
 		{
-			list($header, $value) = explode(': ', trim($data), 2);
+			$data = trim($data);
+			if (strpos($data, ': ') === false) return $strlen;
+			list($header, $value) = explode(': ', $data, 2);
 			if ($header == 'Last-Modified')
 				$this->response->headers['time'] = strtotime($value);
 			elseif ($header == 'Content-Length')
