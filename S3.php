@@ -45,14 +45,19 @@ class S3
 	const STORAGE_CLASS_STANDARD = 'STANDARD';
 	const STORAGE_CLASS_RRS = 'REDUCED_REDUNDANCY';
 
+	private static $__accessKey = null; // AWS Access key
+	private static $__secretKey = null; // AWS Secret key
+
 	public static $endpoint = 's3.amazonaws.com';
+	public static $proxy = null;
+
 	public static $useSSL = false;
 	public static $useSSLValidation = true;
 	public static $useExceptions = false;
-	public static $proxy = null;
 
-	private static $__accessKey = null; // AWS Access key
-	private static $__secretKey = null; // AWS Secret key
+	public static $sslKey = null;
+	public static $sslCert = null;
+	public static $sslCACert = null;
 
 	/**
 	* Constructor - if you're not using the class statically
@@ -117,6 +122,22 @@ class S3
 	{
 		self::$useSSL = $enabled;
 		self::$useSSLValidation = $validate;
+	}
+
+
+	/**
+	* Set SSL client certificates (experimental)
+	*
+	* @param string $sslCert SSL client certificate
+	* @param string $sslKey SSL client key
+	* @param string $sslCACert SSL CA cert (only required if you are having problems with your system CA cert)
+	* @return void
+	*/
+	public static function setSSLAuth($sslCert = null, $sslKey = null, $sslCACert = null)
+	{
+		self::$sslCert = $sslCert;
+		self::$sslKey = $sslKey;
+		self::$sslCACert = $sslCACert;
 	}
 
 
@@ -1187,13 +1208,13 @@ class S3
 	/**
 	* Invalidate objects in a CloudFront distribution
 	*
-	* Thanks to Martin Lindkvist for S3::invalidate()
+	* Thanks to Martin Lindkvist for S3::invalidateDistribution()
 	*
 	* @param string $distributionId Distribution ID from listDistributions()
 	* @param array $paths Array of object paths to invalidate
 	* @return boolean
 	*/
-	public static function invalidate($distributionId, $paths) {
+	public static function invalidateDistribution($distributionId, $paths) {
 		self::$useSSL = true; // CloudFront requires SSL
 		$rest = new S3Request('POST', '', '2010-08-01/distribution/'.$distributionId.'/invalidation', 'cloudfront.amazonaws.com');
 		$rest->data = self::__getCloudFrontInvalidationBatchXML($paths, (string)microtime(true));
@@ -1528,6 +1549,10 @@ final class S3Request
 			// SSL Validation can now be optional for those with broken OpenSSL installations
 			curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, S3::$useSSLValidation ? 1 : 0);
 			curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, S3::$useSSLValidation ? 1 : 0);
+
+			if (S3::$sslKey !== null) curl_setopt($curl, CURLOPT_SSLKEY, S3::$sslKey);
+			if (S3::$sslCert !== null) curl_setopt($curl, CURLOPT_SSLCERT, S3::$sslCert);
+			if (S3::$sslCACert !== null) curl_setopt($curl, CURLOPT_CAINFO, S3::$sslCACert);
 		}
 
 		curl_setopt($curl, CURLOPT_URL, $url);
