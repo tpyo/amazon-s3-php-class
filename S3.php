@@ -66,7 +66,7 @@ class S3
 	{
 		if ($accessKey !== null && $secretKey !== null)
 			self::setAuth($accessKey, $secretKey);
-		self::$useSSL = ($useSSL && extension_loaded('openssl'));
+		self::$useSSL = $useSSL;
 		self::$endpoint = $endpoint;
 	}
 
@@ -115,7 +115,7 @@ class S3
 	*/
 	public static function setSSL($enabled, $validate = true)
 	{
-		self::$useSSL = ($enabled && extension_loaded('openssl'));
+		self::$useSSL = $enabled;
 		self::$useSSLValidation = $validate;
 	}
 
