@@ -96,12 +96,10 @@ MORE INFORMATION
 	http://undesigned.org.za/files/s3-class-documentation/index.html
 
 	Bug reports:
-	http://code.google.com/p/amazon-s3-php-class/issues/entry
+	https://github.com/tpyo/amazon-s3-php-class/issues
 
 	Amazon S3 documentation:
 	http://docs.amazonwebservices.com/AmazonS3/2006-03-01/
 
 
-
-
-EOF!
+EOF
