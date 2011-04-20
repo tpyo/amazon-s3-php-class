@@ -1649,7 +1649,7 @@ final class S3Request
 			$this->response->body = simplexml_load_string($this->response->body);
 
 			// Grab S3 errors
-			if (!in_array($this->response->code, array(200, 204)) &&
+			if (!in_array($this->response->code, array(200, 204, 206)) &&
 			isset($this->response->body->Code, $this->response->body->Message))
 			{
 				$this->response->error = array(
@@ -1678,7 +1678,7 @@ final class S3Request
 	*/
 	private function __responseWriteCallback(&$curl, &$data)
 	{
-		if ($this->response->code == 200 && $this->fp !== false)
+		if (in_array($this->response->code, array(200, 206)) && $this->fp !== false)
 			return fwrite($this->fp, $data);
 		else
 			$this->response->body .= $data;
