@@ -47,6 +47,7 @@ class S3
 
 	private static $__accessKey = null; // AWS Access key
 	private static $__secretKey = null; // AWS Secret key
+	private static $__sslKey = null;
 
 	public static $endpoint = 's3.amazonaws.com';
 	public static $proxy = null;
@@ -55,9 +56,14 @@ class S3
 	public static $useSSLValidation = true;
 	public static $useExceptions = false;
 
+	// SSL CURL SSL options - only needed if you are experiencing problems with your OpenSSL configuration
 	public static $sslKey = null;
 	public static $sslCert = null;
 	public static $sslCACert = null;
+
+	private static $__signingKeyPairId = null; // AWS Key Pair ID
+	private static $__signingKeyResource = false; // Key resource, freeSigningKey() must be called to clear it from memory
+
 
 	/**
 	* Constructor - if you're not using the class statically
@@ -169,6 +175,36 @@ class S3
 
 
 	/**
+	* Set signing key
+	*
+	* @param string $keyPairId AWS Key Pair ID
+	* @param string $signingKey Private Key
+	* @param boolean $isFile Load private key from file, set to false to load string
+	* @return boolean
+	*/
+	public static function setSigningKey($keyPairId, $signingKey, $isFile = true)
+	{
+		self::$__signingKeyPairId = $keyPairId;
+		if ((self::$__signingKeyResource = openssl_pkey_get_private($isFile ?
+		file_get_contents($signingKey) : $signingKey)) !== false) return true;
+		self::__triggerError('S3::setSigningKey(): Unable to open load private key: '.$signingKey, __FILE__, __LINE__);
+		return false;
+	}
+
+
+	/**
+	* Free signing key from memory, MUST be called if you are using setSigningKey()
+	*
+	* @return void
+	*/
+	public static function freeSigningKey()
+	{
+		if (self::$__signingKeyResource !== false)
+			openssl_free_key(self::$__signingKeyResource);
+	}
+
+
+	/**
 	* Internal error handler
 	*
 	* @internal Internal error handler
@@ -242,6 +278,7 @@ class S3
 	public static function getBucket($bucket, $prefix = null, $marker = null, $maxKeys = null, $delimiter = null, $returnCommonPrefixes = false)
 	{
 		$rest = new S3Request('GET', $bucket, '', self::$endpoint);
+		if ($maxKeys == 0) $maxKeys = null;
 		if ($prefix !== null && $prefix !== '') $rest->setParameter('prefix', $prefix);
 		if ($marker !== null && $marker !== '') $rest->setParameter('marker', $marker);
 		if ($maxKeys !== null && $maxKeys !== '') $rest->setParameter('max-keys', $maxKeys);
@@ -936,6 +973,48 @@ class S3
 
 
 	/**
+	* Get a CloudFront signed policy URL
+	*
+	* @param array $policy Policy
+	* @return string
+	*/
+	public static function getSignedPolicyURL($policy)
+	{
+		$data = json_encode($policy);
+		$signature = '';
+		if (!openssl_sign($data, $signature, self::$__signingKeyResource)) return false;
+
+		$encoded = str_replace(array('+', '='), array('-', '_', '~'), base64_encode($data));
+		$signature = str_replace(array('+', '='), array('-', '_', '~'), base64_encode($signature));
+
+		$url = $policy['Statement'][0]['Resource'] . '?';
+
+		foreach (array('Policy' => $encoded, 'Signature' => $signature, 'Key-Pair-Id' => self::$__signingKeyPairId) as $k => $v)
+			$url .= $k.'='.str_replace('%2F', '/', rawurlencode($v)).'&';
+		return substr($url, 0, -1);
+	}
+
+
+	/**
+	* Get a CloudFront canned policy URL
+	*
+	* @param string $string URL to sign
+	* @param integer $lifetime URL lifetime
+	* @return string
+	*/
+	public static function getSignedCannedURL($url, $lifetime)
+	{
+		return self::getSignedPolicyURL(array(
+			'Statement' => array(
+				array('Resource' => $url, 'Condition' => array(
+					'DateLessThan' => array('AWS:EpochTime' => time() + $lifetime)
+				))
+			)
+		));
+	}
+
+
+	/**
 	* Get upload POST parameters for form uploads
 	*
 	* @param string $bucket Bucket name
@@ -949,7 +1028,8 @@ class S3
 	* @param boolean $flashVars Includes additional "Filename" variable posted by Flash
 	* @return object
 	*/
-	public static function getHttpUploadPostParams($bucket, $uriPrefix = '', $acl = self::ACL_PRIVATE, $lifetime = 3600, $maxFileSize = 5242880, $successRedirect = "201", $amzHeaders = array(), $headers = array(), $flashVars = false)
+	public static function getHttpUploadPostParams($bucket, $uriPrefix = '', $acl = self::ACL_PRIVATE, $lifetime = 3600,
+	$maxFileSize = 5242880, $successRedirect = "201", $amzHeaders = array(), $headers = array(), $flashVars = false)
 	{
 		// Create policy object
 		$policy = new stdClass;
@@ -1005,9 +1085,12 @@ class S3
 	* @param boolean $enabled Enabled (true/false)
 	* @param array $cnames Array containing CNAME aliases
 	* @param string $comment Use the bucket name as the hostname
+	* @param string $defaultRootObject Default root object
+	* @param string $originAccessIdentity Origin access identity
+	* @param array $trustedSigners Array of trusted signers
 	* @return array | false
 	*/
-	public static function createDistribution($bucket, $enabled = true, $cnames = array(), $comment = '')
+	public static function createDistribution($bucket, $enabled = true, $cnames = array(), $comment = null, $defaultRootObject = null, $originAccessIdentity = null, $trustedSigners = array())
 	{
 		if (!extension_loaded('openssl'))
 		{
@@ -1018,8 +1101,18 @@ class S3
 		$useSSL = self::$useSSL;
 
 		self::$useSSL = true; // CloudFront requires SSL
-		$rest = new S3Request('POST', '', '2008-06-30/distribution', 'cloudfront.amazonaws.com');
-		$rest->data = self::__getCloudFrontDistributionConfigXML($bucket.'.s3.amazonaws.com', $enabled, $comment, (string)microtime(true), $cnames);
+		$rest = new S3Request('POST', '', '2010-11-01/distribution', 'cloudfront.amazonaws.com');
+		$rest->data = self::__getCloudFrontDistributionConfigXML(
+			$bucket.'.s3.amazonaws.com',
+			$enabled,
+			(string)$comment,
+			(string)microtime(true),
+			$cnames,
+			$defaultRootObject,
+			$originAccessIdentity,
+			$trustedSigners
+		);
+
 		$rest->size = strlen($rest->data);
 		$rest->setHeader('Content-Type', 'application/xml');
 		$rest = self::__getCloudFrontResponse($rest);
@@ -1056,7 +1149,7 @@ class S3
 		$useSSL = self::$useSSL;
 
 		self::$useSSL = true; // CloudFront requires SSL
-		$rest = new S3Request('GET', '', '2008-06-30/distribution/'.$distributionId, 'cloudfront.amazonaws.com');
+		$rest = new S3Request('GET', '', '2010-11-01/distribution/'.$distributionId, 'cloudfront.amazonaws.com');
 		$rest = self::__getCloudFrontResponse($rest);
 
 		self::$useSSL = $useSSL;
@@ -1073,6 +1166,7 @@ class S3
 		{
 			$dist = self::__parseCloudFrontDistributionConfig($rest->body);
 			$dist['hash'] = $rest->headers['hash'];
+			$dist['id'] = $distributionId;
 			return $dist;
 		}
 		return false;
@@ -1097,8 +1191,18 @@ class S3
 		$useSSL = self::$useSSL;
 
 		self::$useSSL = true; // CloudFront requires SSL
-		$rest = new S3Request('PUT', '', '2008-06-30/distribution/'.$dist['id'].'/config', 'cloudfront.amazonaws.com');
-		$rest->data = self::__getCloudFrontDistributionConfigXML($dist['origin'], $dist['enabled'], $dist['comment'], $dist['callerReference'], $dist['cnames']);
+		$rest = new S3Request('PUT', '', '2010-11-01/distribution/'.$dist['id'].'/config', 'cloudfront.amazonaws.com');
+		$rest->data = self::__getCloudFrontDistributionConfigXML(
+			$dist['origin'],
+			$dist['enabled'],
+			$dist['comment'],
+			$dist['callerReference'],
+			$dist['cnames'],
+			$dist['defaultRootObject'],
+			$dist['originAccessIdentity'],
+			$dist['trustedSigners']
+		);
+
 		$rest->size = strlen($rest->data);
 		$rest->setHeader('If-Match', $dist['hash']);
 		$rest = self::__getCloudFrontResponse($rest);
@@ -1172,11 +1276,9 @@ class S3
 		}
 
 		$useSSL = self::$useSSL;
-
 		self::$useSSL = true; // CloudFront requires SSL
 		$rest = new S3Request('GET', '', '2008-06-30/distribution', 'cloudfront.amazonaws.com');
 		$rest = self::__getCloudFrontResponse($rest);
-
 		self::$useSSL = $useSSL;
 
 		if ($rest->error === false && $rest->code !== 200)
@@ -1204,6 +1306,38 @@ class S3
 		return array();
 	}
 
+	/**
+	* List CloudFront Origin Access Identities
+	*
+	* @return array
+	*/
+	public static function listOriginAccessIdentities()
+	{
+		self::$useSSL = true; // CloudFront requires SSL
+		$rest = new S3Request('GET', '', '2010-11-01/origin-access-identity/cloudfront', 'cloudfront.amazonaws.com');
+		$rest = self::__getCloudFrontResponse($rest);
+		$useSSL = self::$useSSL;
+
+		if ($rest->error === false && $rest->code !== 200)
+			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
+		if ($rest->error !== false)
+		{
+			trigger_error(sprintf("S3::listOriginAccessIdentities(): [%s] %s",
+			$rest->error['code'], $rest->error['message']), E_USER_WARNING);
+			return false;
+		}
+
+		if (isset($rest->body->CloudFrontOriginAccessIdentitySummary))
+		{
+			$identities = array();
+			foreach ($rest->body->CloudFrontOriginAccessIdentitySummary as $identity)
+				if (isset($identity->S3CanonicalUserId))
+					$identities[(string)$identity->Id] = array('id' => (string)$identity->Id, 's3CanonicalUserId' => (string)$identity->S3CanonicalUserId);
+			return $identities;
+		}
+		return false;
+	}
+
 
 	/**
 	* Invalidate objects in a CloudFront distribution
@@ -1215,11 +1349,13 @@ class S3
 	* @return boolean
 	*/
 	public static function invalidateDistribution($distributionId, $paths) {
+		$useSSL = self::$useSSL;
 		self::$useSSL = true; // CloudFront requires SSL
 		$rest = new S3Request('POST', '', '2010-08-01/distribution/'.$distributionId.'/invalidation', 'cloudfront.amazonaws.com');
 		$rest->data = self::__getCloudFrontInvalidationBatchXML($paths, (string)microtime(true));
 		$rest->size = strlen($rest->data);
 		$rest = self::__getCloudFrontResponse($rest);
+		self::$useSSL = $useSSL;
 
 		if ($rest->error === false && $rest->code !== 201)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
@@ -1256,27 +1392,46 @@ class S3
 	/**
 	* Get a DistributionConfig DOMDocument
 	*
+	* http://docs.amazonwebservices.com/AmazonCloudFront/latest/APIReference/index.html?PutConfig.html
+	*
 	* @internal Used to create XML in createDistribution() and updateDistribution()
-	* @param string $bucket Origin bucket
+	* @param string $bucket S3 Origin bucket
 	* @param boolean $enabled Enabled (true/false)
 	* @param string $comment Comment to append
 	* @param string $callerReference Caller reference
 	* @param array $cnames Array of CNAME aliases
+	* @param string $defaultRootObject Default root object
+	* @param string $originAccessIdentity Origin access identity
+	* @param array $trustedSigners Array of trusted signers
 	* @return string
 	*/
-	private static function __getCloudFrontDistributionConfigXML($bucket, $enabled, $comment, $callerReference = '0', $cnames = array())
+	private static function __getCloudFrontDistributionConfigXML($bucket, $enabled, $comment, $callerReference = '0', $cnames = array(), $defaultRootObject = null, $originAccessIdentity = null, $trustedSigners = array())
 	{
 		$dom = new DOMDocument('1.0', 'UTF-8');
 		$dom->formatOutput = true;
 		$distributionConfig = $dom->createElement('DistributionConfig');
-		$distributionConfig->setAttribute('xmlns', 'http://cloudfront.amazonaws.com/doc/2008-06-30/');
-		$distributionConfig->appendChild($dom->createElement('Origin', $bucket));
+		$distributionConfig->setAttribute('xmlns', 'http://cloudfront.amazonaws.com/doc/2010-11-01/');
+
+		$origin = $dom->createElement('S3Origin');
+		$origin->appendChild($dom->createElement('DNSName', $bucket));
+		if ($originAccessIdentity !== null) $origin->appendChild($dom->createElement('OriginAccessIdentity', $originAccessIdentity));
+		$distributionConfig->appendChild($origin);
+
+		if ($defaultRootObject !== null) $distributionConfig->appendChild($dom->createElement('DefaultRootObject', $defaultRootObject));
+
 		$distributionConfig->appendChild($dom->createElement('CallerReference', $callerReference));
 		foreach ($cnames as $cname)
 			$distributionConfig->appendChild($dom->createElement('CNAME', $cname));
 		if ($comment !== '') $distributionConfig->appendChild($dom->createElement('Comment', $comment));
 		$distributionConfig->appendChild($dom->createElement('Enabled', $enabled ? 'true' : 'false'));
+
+		$trusted = $dom->createElement('TrustedSigners');
+		foreach ($trustedSigners as $id => $type)
+			$trusted->appendChild($id !== '' ? $dom->createElement($type, $id) : $dom->createElement($type));
+		$distributionConfig->appendChild($trusted);
+
 		$dom->appendChild($distributionConfig);
+		//var_dump($dom->saveXML());
 		return $dom->saveXML();
 	}
 
@@ -1284,12 +1439,17 @@ class S3
 	/**
 	* Parse a CloudFront distribution config
 	*
+	* See http://docs.amazonwebservices.com/AmazonCloudFront/latest/APIReference/index.html?GetDistribution.html
+	*
 	* @internal Used to parse the CloudFront DistributionConfig node to an array
 	* @param object &$node DOMNode
 	* @return array
 	*/
 	private static function __parseCloudFrontDistributionConfig(&$node)
 	{
+		if (isset($node->DistributionConfig))
+			return self::__parseCloudFrontDistributionConfig($node->DistributionConfig);
+
 		$dist = array();
 		if (isset($node->Id, $node->Status, $node->LastModifiedTime, $node->DomainName))
 		{
@@ -1298,24 +1458,42 @@ class S3
 			$dist['time'] = strtotime((string)$node->LastModifiedTime);
 			$dist['domain'] = (string)$node->DomainName;
 		}
+
 		if (isset($node->CallerReference))
 			$dist['callerReference'] = (string)$node->CallerReference;
-		if (isset($node->Comment))
-			$dist['comment'] = (string)$node->Comment;
-		if (isset($node->Enabled, $node->Origin))
-		{
-			$dist['origin'] = (string)$node->Origin;
+
+		if (isset($node->Enabled))
 			$dist['enabled'] = (string)$node->Enabled == 'true' ? true : false;
-		}
-		elseif (isset($node->DistributionConfig))
+
+		if (isset($node->S3Origin))
 		{
-			$dist = array_merge($dist, self::__parseCloudFrontDistributionConfig($node->DistributionConfig));
+			if (isset($node->S3Origin->DNSName))
+				$dist['origin'] = (string)$node->S3Origin->DNSName;
+
+			$dist['originAccessIdentity'] = isset($node->S3Origin->OriginAccessIdentity) ?
+			(string)$node->S3Origin->OriginAccessIdentity : null;
 		}
+
+		$dist['defaultRootObject'] = isset($node->DefaultRootObject) ? (string)$node->DefaultRootObject : null;
+
+		$dist['cnames'] = array();
 		if (isset($node->CNAME))
-		{
-			$dist['cnames'] = array();
-			foreach ($node->CNAME as $cname) $dist['cnames'][(string)$cname] = (string)$cname;
-		}
+			foreach ($node->CNAME as $cname)
+				$dist['cnames'][(string)$cname] = (string)$cname;
+
+		$dist['trustedSigners'] = array();
+		if (isset($node->TrustedSigners))
+			foreach ($node->TrustedSigners as $signer)
+			{
+				if (isset($signer->Self))
+					$dist['trustedSigners'][''] = 'Self';
+				elseif (isset($signer->KeyPairId))
+					$dist['trustedSigners'][(string)$signer->KeyPairId] = 'KeyPairId';
+				elseif (isset($signer->AwsAccountNumber))
+					$dist['trustedSigners'][(string)$signer->AwsAccountNumber] = 'AwsAccountNumber';
+			}
+
+		$dist['comment'] = isset($node->Comment) ? (string)$node->Comment : null;
 		return $dist;
 	}
 
