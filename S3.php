@@ -1313,6 +1313,13 @@ class S3
 	*/
 	public static function listOriginAccessIdentities()
 	{
+		if (!extension_loaded('openssl'))
+		{
+			self::__triggerError(sprintf("S3::listOriginAccessIdentities(): [%s] %s",
+			"CloudFront functionality requires SSL"), __FILE__, __LINE__);
+			return false;
+		}
+
 		self::$useSSL = true; // CloudFront requires SSL
 		$rest = new S3Request('GET', '', '2010-11-01/origin-access-identity/cloudfront', 'cloudfront.amazonaws.com');
 		$rest = self::__getCloudFrontResponse($rest);
@@ -1348,7 +1355,15 @@ class S3
 	* @param array $paths Array of object paths to invalidate
 	* @return boolean
 	*/
-	public static function invalidateDistribution($distributionId, $paths) {
+	public static function invalidateDistribution($distributionId, $paths)
+	{
+		if (!extension_loaded('openssl'))
+		{
+			self::__triggerError(sprintf("S3::invalidateDistribution(): [%s] %s",
+			"CloudFront functionality requires SSL"), __FILE__, __LINE__);
+			return false;
+		}
+
 		$useSSL = self::$useSSL;
 		self::$useSSL = true; // CloudFront requires SSL
 		$rest = new S3Request('POST', '', '2010-08-01/distribution/'.$distributionId.'/invalidation', 'cloudfront.amazonaws.com');
