@@ -371,7 +371,7 @@ class S3
 		{
 			$dom = new DOMDocument;
 			$createBucketConfiguration = $dom->createElement('CreateBucketConfiguration');
-			$locationConstraint = $dom->createElement('LocationConstraint', strtoupper($location));
+			$locationConstraint = $dom->createElement('LocationConstraint', $location);
 			$createBucketConfiguration->appendChild($locationConstraint);
 			$dom->appendChild($createBucketConfiguration);
 			$rest->data = $dom->saveXML();
@@ -965,9 +965,10 @@ class S3
 	public static function getAuthenticatedURL($bucket, $uri, $lifetime, $hostBucket = false, $https = false)
 	{
 		$expires = time() + $lifetime;
-		$uri = str_replace('%2F', '/', rawurlencode($uri)); // URI should be encoded (thanks Sean O'Dea)
+		$uri = str_replace(array('%2F', '%2B'), array('/', '+'), rawurlencode($uri)); // URI should be encoded (thanks Sean O'Dea)
 		return sprintf(($https ? 'https' : 'http').'://%s/%s?AWSAccessKeyId=%s&Expires=%u&Signature=%s',
-		$hostBucket ? $bucket : $bucket.'.s3.amazonaws.com', $uri, self::$__accessKey, $expires,
+		// $hostBucket ? $bucket : $bucket.'.s3.amazonaws.com', $uri, self::$__accessKey, $expires,
+		$hostBucket ? $bucket : 's3.amazonaws.com/'.$bucket, $uri, self::$__accessKey, $expires,
 		urlencode(self::__getHash("GET\n\n\n{$expires}\n/{$bucket}/{$uri}")));
 	}
 
@@ -988,7 +989,6 @@ class S3
 		$signature = str_replace(array('+', '='), array('-', '_', '~'), base64_encode($signature));
 
 		$url = $policy['Statement'][0]['Resource'] . '?';
-
 		foreach (array('Policy' => $encoded, 'Signature' => $signature, 'Key-Pair-Id' => self::$__signingKeyPairId) as $k => $v)
 			$url .= $k.'='.str_replace('%2F', '/', rawurlencode($v)).'&';
 		return substr($url, 0, -1);
@@ -1650,18 +1650,35 @@ final class S3Request
 		$this->bucket = $bucket;
 		$this->uri = $uri !== '' ? '/'.str_replace('%2F', '/', rawurlencode($uri)) : '/';
 
+		//if ($this->bucket !== '')
+		//	$this->resource = '/'.$this->bucket.$this->uri;
+		//else
+		//	$this->resource = $this->uri;
+
 		if ($this->bucket !== '')
 		{
-			$this->headers['Host'] = $this->bucket.'.'.$this->endpoint;
-			$this->resource = '/'.$this->bucket.$this->uri;
+			if ($this->__dnsBucketName($this->bucket))
+			{
+				$this->headers['Host'] = $this->bucket.'.'.$this->endpoint;
+				$this->resource = '/'.$this->bucket.$this->uri;
+			}
+			else
+			{
+				$this->headers['Host'] = $this->endpoint;
+				$this->uri = $this->uri;
+				if ($this->bucket !== '') $this->uri = '/'.$this->bucket.$this->uri;
+				$this->bucket = '';
+				$this->resource = $this->uri;
+			}
 		}
 		else
 		{
 			$this->headers['Host'] = $this->endpoint;
 			$this->resource = $this->uri;
 		}
-		$this->headers['Date'] = gmdate('D, d M Y H:i:s T');
 
+
+		$this->headers['Date'] = gmdate('D, d M Y H:i:s T');
 		$this->response = new STDClass;
 		$this->response->error = false;
 	}
@@ -1727,11 +1744,13 @@ final class S3Request
 			if (array_key_exists('acl', $this->parameters) ||
 			array_key_exists('location', $this->parameters) ||
 			array_key_exists('torrent', $this->parameters) ||
+			array_key_exists('website', $this->parameters) ||
 			array_key_exists('logging', $this->parameters))
 				$this->resource .= $query;
 		}
-		$url = (S3::$useSSL ? 'https://' : 'http://') . $this->headers['Host'].$this->uri;
-		//var_dump($this->bucket, $this->uri, $this->resource, $url);
+		$url = (S3::$useSSL ? 'https://' : 'http://') . ($this->headers['Host'] !== '' ? $this->headers['Host'] : $this->endpoint) . $this->uri;
+
+		//var_dump('bucket: ' . $this->bucket, 'uri: ' . $this->uri, 'resource: ' . $this->resource, 'url: ' . $url);
 
 		// Basic setup
 		$curl = curl_init();
@@ -1779,11 +1798,18 @@ final class S3Request
 		if (S3::hasAuth())
 		{
 			// Authorization string (CloudFront stringToSign should only contain a date)
-			$headers[] = 'Authorization: ' . S3::__getSignature(
-				$this->headers['Host'] == 'cloudfront.amazonaws.com' ? $this->headers['Date'] :
-				$this->verb."\n".$this->headers['Content-MD5']."\n".
-				$this->headers['Content-Type']."\n".$this->headers['Date'].$amz."\n".$this->resource
-			);
+			if ($this->headers['Host'] == 'cloudfront.amazonaws.com')
+				$headers[] = 'Authorization: ' . S3::__getSignature($this->headers['Date']);
+			else
+			{
+				$headers[] = 'Authorization: ' . S3::__getSignature(
+					$this->verb."\n".
+					$this->headers['Content-MD5']."\n".
+					$this->headers['Content-Type']."\n".
+					$this->headers['Date'].$amz."\n".
+					$this->resource
+				);
+			}
         }
 
 		curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
@@ -1876,6 +1902,23 @@ final class S3Request
 		else
 			$this->response->body .= $data;
 		return strlen($data);
+	}
+
+
+	/**
+	* Check DNS conformity
+	*
+	* @param string $bucket Bucket name
+	* @return boolean
+	*/
+	private function __dnsBucketName($bucket)
+	{
+		if (strlen($bucket) > 63 || !preg_match("/[^a-z0-9\.-]/", $bucket)) return false;
+		if (strstr($bucket, '-.') !== false) return false;
+		if (strstr($bucket, '..') !== false) return false;
+		if (!preg_match("/^[0-9a-z]/", $bucket)) return false;
+		if (!preg_match("/[0-9a-z]$/", $bucket)) return false;
+		return true;
 	}
 
 
