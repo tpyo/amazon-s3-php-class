@@ -1813,6 +1813,7 @@ final class S3Request
         }
 
 		curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+		curl_setopt($curl, CURLOPT_FILETIME, true);
 		curl_setopt($curl, CURLOPT_HEADER, false);
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, false);
 		curl_setopt($curl, CURLOPT_WRITEFUNCTION, array(&$this, '__responseWriteCallback'));
@@ -1851,7 +1852,12 @@ final class S3Request
 
 		// Execute, grab errors
 		if (curl_exec($curl))
+		{
 			$this->response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+			$last_modified = curl_getinfo($curl, CURLINFO_FILETIME);
+			if ($last_modified > -1)
+				$this->response->headers['time'] = $last_modified;
+		}
 		else
 			$this->response->error = array(
 				'code' => curl_errno($curl),
@@ -1939,9 +1945,7 @@ final class S3Request
 			$data = trim($data);
 			if (strpos($data, ': ') === false) return $strlen;
 			list($header, $value) = explode(': ', $data, 2);
-			if ($header == 'Last-Modified')
-				$this->response->headers['time'] = strtotime($value);
-			elseif ($header == 'Content-Length')
+			if ($header == 'Content-Length')
 				$this->response->headers['size'] = (int)$value;
 			elseif ($header == 'Content-Type')
 				$this->response->headers['type'] = $value;
