@@ -2084,6 +2084,65 @@ final class S3Request
 
 
 	/**
+	* Handling redirections with curl if safe_mode or open_basedir is enabled. The function working transparent, no problem with header and returntransfer options. You can handle the max redirection with the optional second argument (the function is set the variable to zero if max redirection exceeded). 
+	* Second parameter values:
+	* - maxredirect is null or not set: redirect maximum five time, after raise PHP warning
+	* - maxredirect is greather then zero: no raiser error, but parameter variable set to zero
+	* - maxredirect is less or equal zero: no follow redirections
+	*
+	* @author zsalab
+	* @link http://de3.php.net/manual/de/function.curl-setopt.php#102121
+	* @param mixed $ch Resource
+	* @param integer &$maxredirect
+	* @return mixed
+	*/
+	private function curl_exec_follow(/*resource*/ $ch, /*int*/ &$maxredirect = null) {
+		$mr = $maxredirect === null ? 5 : intval($maxredirect);
+		if (ini_get('open_basedir') == '' && ini_get('safe_mode' == 'Off')) {
+			curl_setopt($ch, CURLOPT_FOLLOWLOCATION, $mr > 0);
+			curl_setopt($ch, CURLOPT_MAXREDIRS, $mr);
+		} else {
+			curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+			if ($mr > 0) {
+				$newurl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+
+				$rch = curl_copy_handle($ch);
+				curl_setopt($rch, CURLOPT_HEADER, true);
+				curl_setopt($rch, CURLOPT_NOBODY, true);
+				curl_setopt($rch, CURLOPT_FORBID_REUSE, false);
+				curl_setopt($rch, CURLOPT_RETURNTRANSFER, true);
+				do {
+					curl_setopt($rch, CURLOPT_URL, $newurl);
+					$header = curl_exec($rch);
+					if (curl_errno($rch)) {
+						$code = 0;
+					} else {
+						$code = curl_getinfo($rch, CURLINFO_HTTP_CODE);
+						if ($code == 301 || $code == 302) {
+							preg_match('/Location:(.*?)\n/', $header, $matches);
+							$newurl = trim(array_pop($matches));
+						} else {
+							$code = 0;
+						}
+					}
+				} while ($code && --$mr);
+				curl_close($rch);
+				if (!$mr) {
+					if ($maxredirect === null) {
+						trigger_error('Too many redirects. When following redirects, libcurl hit the maximum amount.', E_USER_WARNING);
+					} else {
+						$maxredirect = 0;
+					}
+					return false;
+				}
+				curl_setopt($ch, CURLOPT_URL, $newurl);
+			}
+		}
+		return curl_exec($ch);
+	}
+
+
+	/**
 	* Get the S3 response
 	*
 	* @return object | false
@@ -2177,7 +2236,6 @@ final class S3Request
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, false);
 		curl_setopt($curl, CURLOPT_WRITEFUNCTION, array(&$this, '__responseWriteCallback'));
 		curl_setopt($curl, CURLOPT_HEADERFUNCTION, array(&$this, '__responseHeaderCallback'));
-		curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
 
 		// Request types
 		switch ($this->verb)
@@ -2210,7 +2268,7 @@ final class S3Request
 		}
 
 		// Execute, grab errors
-		if (curl_exec($curl))
+		if ($this->curl_exec_follow($curl))
 			$this->response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 		else
 			$this->response->error = array(
