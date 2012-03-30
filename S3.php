@@ -1003,7 +1003,6 @@ class S3
 				$requestToSign .= $appendString . $header . '=' . $value;
 				$appendString = '&';
 			}
-			echo $requestToSign;
 		}
 		$finalUrl .= 'AWSAccessKeyId=' . self::$__accessKey . '&Expires=' . $expires . '&Signature=' . urlencode(self::__getHash($requestToSign));
 		return $finalUrl;
