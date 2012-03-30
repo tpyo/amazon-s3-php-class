@@ -990,7 +990,7 @@ class S3
 		} else {
 			$expires = time() + $lifetime;
 		}
-		$uri = str_replace('%2F', '/', rawurlencode($uri)); // URI should be encoded (thanks Sean O'Dea)
+		$uri = str_replace(array('%2F', '%2B'), array('/', '+'), rawurlencode($uri)); // URI should be encoded (thanks Sean O'Dea)
 				
 		$finalUrl = sprintf(($https ? 'https' : 'http').'://%s/%s?',
 		$hostBucket ? $bucket : $bucket.'.s3.amazonaws.com', $uri);
