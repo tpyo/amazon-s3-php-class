@@ -1791,7 +1791,21 @@ final class S3Request
 		// AMZ headers must be sorted
 		if (sizeof($amz) > 0)
 		{
-			sort($amz);
+			usort($amz, function($a, $b)
+				{
+					$lenA = strpos($a, ':');
+					$lenB = strpos($b, ':');
+					$minLen = min($lenA, $lenB);
+					
+					$ncmp = strncmp($a, $b, $minLen);
+					if ($lenA == $lenB)
+						return $ncmp;
+					
+					if (0 == $ncmp)
+						return ($lenA < $lenB)? -1: 1;
+					
+					return $ncmp;
+				});
 			$amz = "\n".implode("\n", $amz);
 		} else $amz = '';
 
