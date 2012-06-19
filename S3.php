@@ -1405,6 +1405,57 @@ class S3
 
 
 	/**
+	* List your invalidation batches for invalidateDistribution() in a CloudFront distribution
+	*
+	* http://docs.amazonwebservices.com/AmazonCloudFront/latest/APIReference/ListInvalidation.html
+	* returned array looks like this:
+	*	Array
+	*	(
+	*		[I31TWB0CN9V6XD] => InProgress
+	*		[IT3TFE31M0IHZ] => Completed
+	*		[I12HK7MPO1UQDA] => Completed
+	*		[I1IA7R6JKTC3L2] => Completed
+	*	)
+    *
+	* @param string $distributionId Distribution ID from listDistributions()
+	* @return array
+	*/
+	public static function getDistributionInvalidationList($distributionId)
+	{
+		if (!extension_loaded('openssl'))
+		{
+			self::__triggerError(sprintf("S3::getDistributionInvalidationList(): [%s] %s",
+			"CloudFront functionality requires SSL"), __FILE__, __LINE__);
+			return false;
+		}
+
+		$useSSL = self::$useSSL;
+		self::$useSSL = true; // CloudFront requires SSL
+		$rest = new S3Request('GET', '', '2010-11-01/distribution/'.$distributionId.'/invalidation', 'cloudfront.amazonaws.com');
+		$rest = self::__getCloudFrontResponse($rest);
+		self::$useSSL = $useSSL;
+
+		if ($rest->error === false && $rest->code !== 200)
+			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
+		if ($rest->error !== false)
+		{
+			trigger_error(sprintf("S3::getDistributionInvalidationList('{$distributionId}'): [%s]",
+			$rest->error['code'], $rest->error['message']), E_USER_WARNING);
+			return false;
+		}
+		elseif ($rest->body instanceof SimpleXMLElement && isset($rest->body->InvalidationSummary))
+		{
+			$list = array();
+			foreach ($rest->body->InvalidationSummary as $summary)
+				$list[(string)$summary->Id] = (string)$summary->Status;
+
+			return $list;
+		}
+		return array();
+	}
+
+
+	/**
 	* Get a DistributionConfig DOMDocument
 	*
 	* http://docs.amazonwebservices.com/AmazonCloudFront/latest/APIReference/index.html?PutConfig.html
