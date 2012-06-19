@@ -652,7 +652,7 @@ class S3
 		foreach ($metaHeaders as $h => $v) $rest->setAmzHeader('x-amz-meta-'.$h, $v);
 		if ($storageClass !== self::STORAGE_CLASS_STANDARD) // Storage class
 			$rest->setAmzHeader('x-amz-storage-class', $storageClass);
-		$rest->setAmzHeader('x-amz-acl', $acl); // Added rawurlencode() for $srcUri (thanks a.yamanoi)
+		$rest->setAmzHeader('x-amz-acl', $acl);
 		$rest->setAmzHeader('x-amz-copy-source', sprintf('/%s/%s', $srcBucket, rawurlencode($srcUri)));
 		if (sizeof($requestHeaders) > 0 || sizeof($metaHeaders) > 0)
 			$rest->setAmzHeader('x-amz-metadata-directive', 'REPLACE');
@@ -965,7 +965,7 @@ class S3
 	public static function getAuthenticatedURL($bucket, $uri, $lifetime, $hostBucket = false, $https = false)
 	{
 		$expires = time() + $lifetime;
-		$uri = str_replace(array('%2F', '%2B'), array('/', '+'), rawurlencode($uri)); // URI should be encoded (thanks Sean O'Dea)
+		$uri = str_replace(array('%2F', '%2B'), array('/', '+'), rawurlencode($uri));
 		return sprintf(($https ? 'https' : 'http').'://%s/%s?AWSAccessKeyId=%s&Expires=%u&Signature=%s',
 		// $hostBucket ? $bucket : $bucket.'.s3.amazonaws.com', $uri, self::$__accessKey, $expires,
 		$hostBucket ? $bucket : 's3.amazonaws.com/'.$bucket, $uri, self::$__accessKey, $expires,
@@ -1736,7 +1736,6 @@ final class S3Request
 			$query = substr($this->uri, -1) !== '?' ? '?' : '&';
 			foreach ($this->parameters as $var => $value)
 				if ($value == null || $value == '') $query .= $var.'&';
-				// Parameters should be encoded (thanks Sean O'Dea)
 				else $query .= $var.'='.rawurlencode($value).'&';
 			$query = substr($query, 0, -1);
 			$this->uri .= $query;
@@ -1791,7 +1790,8 @@ final class S3Request
 		// AMZ headers must be sorted
 		if (sizeof($amz) > 0)
 		{
-			sort($amz);
+			//sort($amz);
+			usort($amz, array(&$this, '__sortMetaHeadersCmp'));
 			$amz = "\n".implode("\n", $amz);
 		} else $amz = '';
 
@@ -1887,6 +1887,24 @@ final class S3Request
 		return $this->response;
 	}
 
+	/**
+	* Sort compare for meta headers
+	*
+	* @internal Used to sort x-amz meta headers
+	* @param string $a String A
+	* @param string $b String B
+	* @return integer
+	*/
+	private function __sortMetaHeadersCmp($a, $b)
+	{
+		$lenA = strpos($a, ':');
+		$lenB = strpos($b, ':');
+		$minLen = min($lenA, $lenB);
+		$ncmp = strncmp($a, $b, $minLen);
+		if ($lenA == $lenB) return $ncmp;
+		if (0 == $ncmp) return $lenA < $lenB ? -1 : 1;
+		return $ncmp;
+	}
 
 	/**
 	* CURL write callback
@@ -1948,7 +1966,7 @@ final class S3Request
 			elseif ($header == 'ETag')
 				$this->response->headers['hash'] = $value{0} == '"' ? substr($value, 1, -1) : $value;
 			elseif (preg_match('/^x-amz-meta-.*$/', $header))
-				$this->response->headers[$header] = is_numeric($value) ? (int)$value : $value;
+				$this->response->headers[$header] = $value;
 		}
 		return $strlen;
 	}
