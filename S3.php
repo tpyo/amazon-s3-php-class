@@ -471,7 +471,7 @@ class S3
 		if ($input === false) return false;
 		$rest = new S3Request('PUT', $bucket, $uri, self::$endpoint);
 
-		if (is_string($input)) $input = array(
+		if (!is_array($input)) $input = array(
 			'data' => $input, 'size' => strlen($input),
 			'md5sum' => base64_encode(md5($input, true))
 		);
