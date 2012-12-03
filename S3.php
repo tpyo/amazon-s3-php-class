@@ -403,7 +403,7 @@ class S3
 	{
 		$rest = new S3Request('DELETE', $bucket, '', self::$endpoint);
 		$rest = $rest->getResponse();
-		if ($rest->error === false && $rest->code !== 204)
+		if ($rest->error === false && $rest->code !== 204 && $rest->code != 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false)
 		{
