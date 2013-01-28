@@ -2,16 +2,16 @@
 /**
 * $Id$
 *
-* Copyright (c) 2011, Donovan Schönknecht.  All rights reserved.
+* Copyright (c) 2011, Donovan Schönknecht.	All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
 *
 * - Redistributions of source code must retain the above copyright notice,
-*   this list of conditions and the following disclaimer.
+*	 this list of conditions and the following disclaimer.
 * - Redistributions in binary form must reproduce the above copyright
-*   notice, this list of conditions and the following disclaimer in the
-*   documentation and/or other materials provided with the distribution.
+*	 notice, this list of conditions and the following disclaimer in the
+*	 documentation and/or other materials provided with the distribution.
 *
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -1416,7 +1416,7 @@ class S3
 	*		[I12HK7MPO1UQDA] => Completed
 	*		[I1IA7R6JKTC3L2] => Completed
 	*	)
-    *
+		*
 	* @param string $distributionId Distribution ID from listDistributions()
 	* @return array
 	*/
@@ -1861,7 +1861,7 @@ final class S3Request
 					$this->resource
 				);
 			}
-        }
+				}
 
 		curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
 		curl_setopt($curl, CURLOPT_HEADER, false);

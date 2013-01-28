@@ -57,8 +57,8 @@ BUCKETS
 
 
 Get a list of buckets:
-	$s3->listBuckets()  // Simple bucket list
-	$s3->listBuckets(true)  // Detailed bucket list
+	$s3->listBuckets()	// Simple bucket list
+	$s3->listBuckets(true)	// Detailed bucket list
 
 
 Create a public-read bucket:
