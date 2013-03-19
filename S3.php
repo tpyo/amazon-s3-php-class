@@ -674,6 +674,47 @@ class S3
 
 
 	/**
+	* Set up a bucket redirection
+	*
+	* @param string $bucket Bucket name
+	* @param string $location Target host name
+	* @return boolean
+	*/
+	public static function setBucketRedirect($bucket = NULL, $location = NULL)
+	{
+		$rest = new S3Request('PUT', $bucket, '', self::$endpoint);
+
+		if( empty($bucket) || empty($location) ) {
+			self::__triggerError("S3::setBucketRedirect({$bucket}, {$location}): Empty parameter.", __FILE__, __LINE__);
+			return false;
+		}
+
+		$dom = new DOMDocument;
+		$websiteConfiguration = $dom->createElement('WebsiteConfiguration');
+		$redirectAllRequestsTo = $dom->createElement('RedirectAllRequestsTo');
+		$hostName = $dom->createElement('HostName', $location);
+		$redirectAllRequestsTo->appendChild($hostName);
+		$websiteConfiguration->appendChild($redirectAllRequestsTo);
+		$dom->appendChild($websiteConfiguration);
+                $rest->setParameter('website', null);
+		$rest->data = $dom->saveXML();
+		$rest->size = strlen($rest->data);
+		$rest->setHeader('Content-Type', 'application/xml');
+		$rest = $rest->getResponse();
+
+		if ($rest->error === false && $rest->code !== 200)
+			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
+		if ($rest->error !== false)
+		{
+			self::__triggerError(sprintf("S3::setBucketRedirect({$bucket}, {$location}): [%s] %s",
+			$rest->error['code'], $rest->error['message']), __FILE__, __LINE__);
+			return false;
+		}
+		return true;
+	}
+
+
+	/**
 	* Set logging for a bucket
 	*
 	* @param string $bucket Bucket name
