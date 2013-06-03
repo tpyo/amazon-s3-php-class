@@ -44,25 +44,125 @@ class S3
 
 	const STORAGE_CLASS_STANDARD = 'STANDARD';
 	const STORAGE_CLASS_RRS = 'REDUCED_REDUNDANCY';
-
-	private static $__accessKey = null; // AWS Access key
-	private static $__secretKey = null; // AWS Secret key
+	
+	/**
+	 * The AWS Access key
+	 *
+	 * @var string
+	 * @access private
+	 * @static
+	 */
+	private static $__accessKey = null;
+	
+	/**
+	 * AWS Secret Key
+	 *
+	 * @var string
+	 * @access private
+	 * @static
+	 */
+	private static $__secretKey = null;
+	
+	/**
+	 * SSL Client key
+	 *
+	 * @var string
+	 * @access private
+	 * @static
+	 */
 	private static $__sslKey = null;
-
+	
+	/**
+	 * AWS URI
+	 *
+	 * @var string
+	 * @acess public
+	 * @static
+	 */
 	public static $endpoint = 's3.amazonaws.com';
+	
+	/**
+	 * Proxy information
+	 *
+	 * @var null|array
+	 * @access public
+	 * @static
+	 */
 	public static $proxy = null;
-
+	
+	/**
+	 * Connect using SSL?
+	 *
+	 * @var bool
+	 * @access public
+	 * @static
+	 */
 	public static $useSSL = false;
+	
+	/**
+	 * Use SSL validation?
+	 *
+	 * @var bool
+	 * @access public
+	 * @static
+	 */
 	public static $useSSLValidation = true;
+	
+	/**
+	 * Use PHP exceptions?
+	 *
+	 * @var bool
+	 * @access public
+	 * @static
+	 */
 	public static $useExceptions = false;
 
 	// SSL CURL SSL options - only needed if you are experiencing problems with your OpenSSL configuration
+	
+	/**
+	 * SSL client key
+	 *
+	 * @var bool
+	 * @access public
+	 * @static
+	 */
 	public static $sslKey = null;
+	
+	/**
+	 * SSL client certfificate
+	 *
+	 * @var string
+	 * @acess public
+	 * @static
+	 */
 	public static $sslCert = null;
+	
+	/**
+	 * SSL CA cert (only required if you are having problems with your system CA cert)
+	 *
+	 * @var string
+	 * @access public
+	 * @static
+	 */
 	public static $sslCACert = null;
-
-	private static $__signingKeyPairId = null; // AWS Key Pair ID
-	private static $__signingKeyResource = false; // Key resource, freeSigningKey() must be called to clear it from memory
+	
+	/**
+	 * AWS Key Pair ID
+	 *
+	 * @var string
+	 * @access private
+	 * @static
+	 */
+	private static $__signingKeyPairId = null;
+	
+	/**
+	 * Key resource, freeSigningKey() must be called to clear it from memory
+	 *
+	 * @var bool
+	 * @access private
+	 * @static 
+	 */
+	private static $__signingKeyResource = false;
 
 
 	/**
@@ -71,6 +171,7 @@ class S3
 	* @param string $accessKey Access key
 	* @param string $secretKey Secret key
 	* @param boolean $useSSL Enable SSL
+	* @param string $endpoint Amazon URI
 	* @return void
 	*/
 	public function __construct($accessKey = null, $secretKey = null, $useSSL = false, $endpoint = 's3.amazonaws.com')
@@ -83,7 +184,7 @@ class S3
 
 
 	/**
-	* Set the sertvice endpoint
+	* Set the service endpoint
 	*
 	* @param string $host Hostname
 	* @return void
@@ -262,7 +363,7 @@ class S3
 	}
 
 
-	/*
+	/**
 	* Get contents for a bucket
 	*
 	* If maxKeys is null this method will loop through truncated result sets
@@ -634,8 +735,8 @@ class S3
 	/**
 	* Copy an object
 	*
-	* @param string $bucket Source bucket name
-	* @param string $uri Source object URI
+	* @param string $srcBucket Source bucket name
+	* @param string $srcUri Source object URI
 	* @param string $bucket Destination bucket name
 	* @param string $uri Destination object URI
 	* @param constant $acl ACL constant
@@ -1039,7 +1140,7 @@ class S3
 	/**
 	* Get a CloudFront canned policy URL
 	*
-	* @param string $string URL to sign
+	* @param string $url URL to sign
 	* @param integer $lifetime URL lifetime
 	* @return string
 	*/
@@ -1430,6 +1531,7 @@ class S3
 	*
 	* @internal Used to create XML in invalidateDistribution()
 	* @param array $paths Paths to objects to invalidateDistribution
+	* @param int $callerReference
 	* @return string
 	*/
 	private static function __getCloudFrontInvalidationBatchXML($paths, $callerReference = '0') {
@@ -1718,13 +1820,103 @@ class S3
 
 }
 
+/**
+ * S3 Request class 
+ *
+ * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
+ * @version 0.5.0-dev
+ */
 final class S3Request
 {
-	private $endpoint, $verb, $bucket, $uri, $resource = '', $parameters = array(),
-	$amzHeaders = array(), $headers = array(
+	/**
+	 * AWS URI
+	 *
+	 * @var string
+	 * @access pricate
+	 */
+	private $endpoint;
+	
+	/**
+	 * Verb
+	 *
+	 * @var string
+	 * @access private
+	 */
+	private $verb;
+	
+	/**
+	 * S3 bucket name
+	 *
+	 * @var string
+	 * @access private
+	 */
+	private $bucket;
+	
+	/**
+	 * Object URI
+	 *
+	 * @var string
+	 * @access private
+	 */
+	private $uri;
+	
+	/**
+	 * Final object URI
+	 *
+	 * @var string
+	 * @access private
+	 */
+	private $resource = '';
+	
+	/**
+	 * Additional request parameters
+	 *
+	 * @var array
+	 * @access private
+	 */
+	private $parameters = array();
+	
+	/**
+	 * Amazon specific request headers
+	 *
+	 * @var array
+	 * @access private
+	 */
+	private $amzHeaders = array(), $headers = array(
 		'Host' => '', 'Date' => '', 'Content-MD5' => '', 'Content-Type' => ''
 	);
-	public $fp = false, $size = 0, $data = false, $response;
+	
+	/**
+	 * Use HTTP PUT?
+	 *
+	 * @var bool
+	 * @access public
+	 */
+	public $fp = false;
+	
+	/**
+	 * PUT file size
+	 *
+	 * @var int
+	 * @access public
+	 */
+	public $size = 0;
+	
+	/**
+	 * PUT post fields
+	 *
+	 * @var array
+	 * @access public
+	 */
+	public $data = false;
+	
+	/**
+	 * S3 request respone
+	 *
+	 * @var object
+	 * @access public
+	 */
+	public $response;
 
 
 	/**
@@ -1733,10 +1925,12 @@ final class S3Request
 	* @param string $verb Verb
 	* @param string $bucket Bucket name
 	* @param string $uri Object URI
+	* @param string $endpoint AWS endpoint URI
 	* @return mixed
 	*/
 	function __construct($verb, $bucket = '', $uri = '', $endpoint = 's3.amazonaws.com')
 	{
+		
 		$this->endpoint = $endpoint;
 		$this->verb = $verb;
 		$this->bucket = $bucket;
@@ -2065,7 +2259,22 @@ final class S3Request
 
 }
 
+/**
+ * S3 exception class
+ *
+ * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
+ * @version 0.5.0-dev
+ */
+
 class S3Exception extends Exception {
+	/**
+	 * Class constructor
+	 *
+	 * @param string $message Exception message
+	 * @param string $file File in which exception was created
+	 * @param string $line Line number on which exception was created
+	 * @param int $code Exception code
+	 */
 	function __construct($message, $file, $line, $code = 0)
 	{
 		parent::__construct($message, $code);
