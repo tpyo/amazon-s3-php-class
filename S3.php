@@ -2,7 +2,7 @@
 /**
 * $Id$
 *
-* Copyright (c) 2011, Donovan Schönknecht.  All rights reserved.
+* Copyright (c) 2013, Donovan Schönknecht.  All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
@@ -804,7 +804,7 @@ class S3
 		$redirectAllRequestsTo->appendChild($hostName);
 		$websiteConfiguration->appendChild($redirectAllRequestsTo);
 		$dom->appendChild($websiteConfiguration);
-                $rest->setParameter('website', null);
+		$rest->setParameter('website', null);
 		$rest->data = $dom->saveXML();
 		$rest->size = strlen($rest->data);
 		$rest->setHeader('Content-Type', 'application/xml');
@@ -1566,7 +1566,7 @@ class S3
 	*		[I12HK7MPO1UQDA] => Completed
 	*		[I1IA7R6JKTC3L2] => Completed
 	*	)
-    *
+	*
 	* @param string $distributionId Distribution ID from listDistributions()
 	* @return array
 	*/
@@ -1780,8 +1780,8 @@ class S3
 			'zip' => 'application/zip', 'gz' => 'application/x-gzip',
 			'tar' => 'application/x-tar', 'bz' => 'application/x-bzip',
 			'bz2' => 'application/x-bzip2',  'rar' => 'application/x-rar-compressed',
-            'exe' => 'application/x-msdownload', 'msi' => 'application/x-msdownload',
-            'cab' => 'application/vnd.ms-cab-compressed', 'txt' => 'text/plain',
+			'exe' => 'application/x-msdownload', 'msi' => 'application/x-msdownload',
+			'cab' => 'application/vnd.ms-cab-compressed', 'txt' => 'text/plain',
 			'asc' => 'text/plain', 'htm' => 'text/html', 'html' => 'text/html',
 			'css' => 'text/css', 'js' => 'text/javascript',
 			'xml' => 'text/xml', 'xsl' => 'application/xsl+xml',
@@ -2106,7 +2106,7 @@ final class S3Request
 					$this->resource
 				);
 			}
-        }
+		}
 
 		curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
 		curl_setopt($curl, CURLOPT_HEADER, false);
