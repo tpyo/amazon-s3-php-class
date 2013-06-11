@@ -142,34 +142,34 @@ final class S3Wrapper extends S3 {
 	public function stream_seek($offset, $whence) {
 		switch ($whence) {
 			case SEEK_SET:
-                if ($offset < strlen($this->buffer->body) && $offset >= 0) {
-                    $this->position = $offset;
-                    return true;
-                } else return false;
-            break;
-            case SEEK_CUR:
-                if ($offset >= 0) {
-                    $this->position += $offset;
-                    return true;
-                } else return false;
-            break;
-            case SEEK_END:
-                $bytes = strlen($this->buffer->body);
-                if ($bytes + $offset >= 0) {
-                    $this->position = $bytes + $offset;
-                    return true;
-                } else return false;
-            break;
-            default: return false;
-        }
-    }
+								if ($offset < strlen($this->buffer->body) && $offset >= 0) {
+										$this->position = $offset;
+										return true;
+								} else return false;
+						break;
+						case SEEK_CUR:
+								if ($offset >= 0) {
+										$this->position += $offset;
+										return true;
+								} else return false;
+						break;
+						case SEEK_END:
+								$bytes = strlen($this->buffer->body);
+								if ($bytes + $offset >= 0) {
+										$this->position = $bytes + $offset;
+										return true;
+								} else return false;
+						break;
+						default: return false;
+				}
+		}
 
-    private function __getURL($path) {
-        $this->url = parse_url($path);
-        if (!isset($this->url['scheme']) || $this->url['scheme'] !== 's3') return $this->url;
-        if (isset($this->url['user'], $this->url['pass'])) self::setAuth($this->url['user'], $this->url['pass']);
-        $this->url['path'] = isset($this->url['path']) ? substr($this->url['path'], 1) : '';
-    }
+		private function __getURL($path) {
+				$this->url = parse_url($path);
+				if (!isset($this->url['scheme']) || $this->url['scheme'] !== 's3') return $this->url;
+				if (isset($this->url['user'], $this->url['pass'])) self::setAuth($this->url['user'], $this->url['pass']);
+				$this->url['path'] = isset($this->url['path']) ? substr($this->url['path'], 1) : '';
+		}
 
 	private function __translateMode($mode) {
 		$acl = self::ACL_PRIVATE;
