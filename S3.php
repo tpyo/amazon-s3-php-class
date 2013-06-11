@@ -1069,8 +1069,32 @@ class S3
 		}
 		return $acp;
 	}
-
-
+	
+	/**
+	 * Generate a policy document
+	 *
+	 * @param array $args Policy document arguments
+	 * @return string The encoded policy document
+	 */
+	public static function createPolicyDocument( $args )
+	{
+		$policy = base64_encode( json_encode( $args	) );
+		
+		return $policy;
+	}
+	
+	/**
+	 * Sign a policy document
+	 *
+	 * @param string $secret AWS secret key
+	 * @param string $policy Policy document
+	 * @return string The signed policy document
+	 */
+	public static function getSignedPolicyDocument( $secret, $policy )
+	{
+		return base64_encode(hash_hmac('sha1', $policy, $secret, true));
+	}
+	
 	/**
 	* Delete an object
 	*
