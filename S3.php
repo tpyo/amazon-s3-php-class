@@ -1746,15 +1746,17 @@ class S3
 	/**
 	* Get MIME type for file
 	*
+	* To override the putObject() Content-Type, add it to $requestHeaders
+	*
+	* To use fileinfo, ensure the MAGIC environment variable is set
+	*
 	* @internal Used to get mime types
 	* @param string &$file File path
 	* @return string
 	*/
-	public static function __getMimeType(&$file)
+	private static function __getMimeType(&$file)
 	{
-		$type = false;
-		// Fileinfo documentation says fileinfo_open() will use the
-		// MAGIC env var for the magic file
+		// Use fileinfo if available
 		if (extension_loaded('fileinfo') && isset($_ENV['MAGIC']) &&
 		($finfo = finfo_open(FILEINFO_MIME, $_ENV['MAGIC'])) !== false)
 		{
@@ -1767,21 +1769,19 @@ class S3
 				$type = trim(array_shift($type));
 			}
 			finfo_close($finfo);
+			if ($type !== false && strlen($type) > 0) return $type;
+		}
 
-		// If anyone is still using mime_content_type()
-		} elseif (function_exists('mime_content_type'))
-			$type = trim(mime_content_type($file));
-
-		if ($type !== false && strlen($type) > 0) return $type;
-
-		// Otherwise do it the old fashioned way
 		static $exts = array(
-			'jpg' => 'image/jpeg', 'gif' => 'image/gif', 'png' => 'image/png',
-			'tif' => 'image/tiff', 'tiff' => 'image/tiff', 'ico' => 'image/x-icon',
-			'swf' => 'application/x-shockwave-flash', 'pdf' => 'application/pdf',
+			'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif',
+			'png' => 'image/png', 'ico' => 'image/x-icon', 'pdf' => 'application/pdf',
+			'tif' => 'image/tiff', 'tiff' => 'image/tiff', 'svg' => 'image/svg+xml',
+			'svgz' => 'image/svg+xml', 'swf' => 'application/x-shockwave-flash', 
 			'zip' => 'application/zip', 'gz' => 'application/x-gzip',
 			'tar' => 'application/x-tar', 'bz' => 'application/x-bzip',
-			'bz2' => 'application/x-bzip2', 'txt' => 'text/plain',
+			'bz2' => 'application/x-bzip2',  'rar' => 'application/x-rar-compressed',
+            'exe' => 'application/x-msdownload', 'msi' => 'application/x-msdownload',
+            'cab' => 'application/vnd.ms-cab-compressed', 'txt' => 'text/plain',
 			'asc' => 'text/plain', 'htm' => 'text/html', 'html' => 'text/html',
 			'css' => 'text/css', 'js' => 'text/javascript',
 			'xml' => 'text/xml', 'xsl' => 'application/xsl+xml',
@@ -1789,8 +1789,11 @@ class S3
 			'avi' => 'video/x-msvideo', 'mpg' => 'video/mpeg', 'mpeg' => 'video/mpeg',
 			'mov' => 'video/quicktime', 'flv' => 'video/x-flv', 'php' => 'text/x-php'
 		);
-		$ext = strtolower(pathInfo($file, PATHINFO_EXTENSION));
-		return isset($exts[$ext]) ? $exts[$ext] : 'application/octet-stream';
+		$ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+		// mime_content_type() is deprecated, fileinfo should be configured
+		$type = isset($exts[$ext]) ? $exts[$ext] : trim(mime_content_type($file));
+
+		return ($type !== false && strlen($type) > 0) ? $type : 'application/octet-stream';
 	}
 
 
