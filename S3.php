@@ -262,7 +262,7 @@ class S3
 	*/
 	public static function setProxy($host, $user = null, $pass = null, $type = CURLPROXY_SOCKS5)
 	{
-		self::$proxy = array('host' => $host, 'type' => $type, 'user' => null, 'pass' => 'null');
+		self::$proxy = array('host' => $host, 'type' => $type, 'user' => $user, 'pass' => $pass);
 	}
 
 
@@ -1541,7 +1541,8 @@ class S3
 	* @param int $callerReference
 	* @return string
 	*/
-	private static function __getCloudFrontInvalidationBatchXML($paths, $callerReference = '0') {
+	private static function __getCloudFrontInvalidationBatchXML($paths, $callerReference = '0')
+	{
 		$dom = new DOMDocument('1.0', 'UTF-8');
 		$dom->formatOutput = true;
 		$invalidationBatch = $dom->createElement('InvalidationBatch');
@@ -1892,10 +1893,18 @@ final class S3Request
 	 * @var array
 	 * @access private
 	 */
-	private $amzHeaders = array(), $headers = array(
+	private $amzHeaders = array();
+
+	/**
+	 * HTTP request headers
+	 *
+	 * @var array
+	 * @access private
+	 */
+	private $headers = array(
 		'Host' => '', 'Date' => '', 'Content-MD5' => '', 'Content-Type' => ''
 	);
-	
+
 	/**
 	 * Use HTTP PUT?
 	 *
@@ -1903,7 +1912,7 @@ final class S3Request
 	 * @access public
 	 */
 	public $fp = false;
-	
+
 	/**
 	 * PUT file size
 	 *
@@ -1911,7 +1920,7 @@ final class S3Request
 	 * @access public
 	 */
 	public $size = 0;
-	
+
 	/**
 	 * PUT post fields
 	 *
@@ -1919,7 +1928,7 @@ final class S3Request
 	 * @access public
 	 */
 	public $data = false;
-	
+
 	/**
 	 * S3 request respone
 	 *
