@@ -545,13 +545,25 @@ class S3
 	* @param string $md5sum MD5 hash to send (optional)
 	* @return array | false
 	*/
-	public static function inputResource(&$resource, $bufferSize, $md5sum = '')
+	public static function inputResource(&$resource, $bufferSize = false, $md5sum = '')
 	{
-		if (!is_resource($resource) || $bufferSize < 0)
+		if (!is_resource($resource) || (int)$bufferSize < 0)
 		{
 			self::__triggerError('S3::inputResource(): Invalid resource or buffer size', __FILE__, __LINE__);
 			return false;
 		}
+
+		// Try to figure out the bytesize
+		if ($bufferSize === false)
+		{
+			if (fseek($resource, 0, SEEK_END) < 0 || ($bufferSize = ftell($resource)) === false)
+			{
+				self::__triggerError('S3::inputResource(): Unable to obtain resource size', __FILE__, __LINE__);
+				return false;
+			}
+			fseek($resource, 0);
+		}
+
 		$input = array('size' => $bufferSize, 'md5sum' => $md5sum);
 		$input['fp'] =& $resource;
 		return $input;
