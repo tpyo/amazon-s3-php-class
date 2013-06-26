@@ -1999,6 +1999,7 @@ final class S3Request
 		$this->response = new STDClass;
 		$this->response->error = false;
 		$this->response->body = null;
+		$this->response->headers = array();
 	}
 
 
