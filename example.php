@@ -11,6 +11,8 @@ if (!class_exists('S3')) require_once 'S3.php';
 // AWS access info
 if (!defined('awsAccessKey')) define('awsAccessKey', 'change-this');
 if (!defined('awsSecretKey')) define('awsSecretKey', 'change-this');
+if (!defined('endPoint')) define('endPoint', 'change-this');
+if (!defined('useSSL')) define('useSSL', 'change-this');
 
 $uploadFile = dirname(__FILE__).'/S3.php'; // File to upload, we'll use the S3 class since it exists
 $bucketName = uniqid('s3test'); // Temporary bucket
@@ -28,12 +30,12 @@ if (!extension_loaded('curl') && !@dl(PHP_SHLIB_SUFFIX == 'so' ? 'curl.so' : 'ph
 	exit("\nERROR: CURL extension not loaded\n\n");
 
 // Pointless without your keys!
-if (awsAccessKey == 'change-this' || awsSecretKey == 'change-this')
+if (awsAccessKey == 'change-this' || awsSecretKey == 'change-this' || endPoint == 'change-this')
 	exit("\nERROR: AWS access information required\n\nPlease edit the following lines in this file:\n\n".
 	"define('awsAccessKey', 'change-me');\ndefine('awsSecretKey', 'change-me');\n\n");
 
 // Instantiate the class
-$s3 = new S3(awsAccessKey, awsSecretKey);
+$s3 = new S3(awsAccessKey, awsSecretKey, useSSL, endPoint);
 
 // List your buckets:
 echo "S3::listBuckets(): ".print_r($s3->listBuckets(), 1)."\n";

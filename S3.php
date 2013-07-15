@@ -177,12 +177,14 @@ class S3
 	* @param string $endpoint Amazon URI
 	* @return void
 	*/
-	public function __construct($accessKey = null, $secretKey = null, $useSSL = false, $endpoint = 's3.amazonaws.com')
+	public function __construct($accessKey = null, $secretKey = null, $useSSL = null, $endpoint = null)
 	{
 		if ($accessKey !== null && $secretKey !== null)
 			self::setAuth($accessKey, $secretKey);
-		self::$useSSL = $useSSL;
-		self::$endpoint = $endpoint;
+		if($endpoint !== null)
+			self::setEndpoint($endpoint);
+		if($useSSL !== null)
+			self::setSSL($useSSL);
 	}
 
 
@@ -225,11 +227,11 @@ class S3
 	* Set SSL on or off
 	*
 	* @param boolean $enabled SSL enabled
-	* @param boolean $validate SSL certificate validation
 	* @return void
 	*/
-	public static function setSSL($enabled, $validate = true)
+	public static function setSSL($enabled)
 	{
+		$validate = true;
 		self::$useSSL = $enabled;
 		self::$useSSLValidation = $validate;
 	}
@@ -1959,7 +1961,7 @@ final class S3Request
 	* @param string $endpoint AWS endpoint URI
 	* @return mixed
 	*/
-	function __construct($verb, $bucket = '', $uri = '', $endpoint = 's3.amazonaws.com')
+	function __construct($verb, $bucket = '', $uri = '', $endpoint = '')
 	{
 		
 		$this->endpoint = $endpoint;
