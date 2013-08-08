@@ -470,6 +470,7 @@ class S3
 	{
 		$rest = new S3Request('PUT', $bucket, '', self::$endpoint);
 		$rest->setAmzHeader('x-amz-acl', $acl);
+		$rest->setHeader('Content-Length', 0);
 
 		if ($location !== false)
 		{
