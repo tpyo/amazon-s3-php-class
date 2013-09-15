@@ -1,6 +1,5 @@
 # Amazon S3 PHP Class
 
-
 ## Usage
 
 OO method (e,g; $s3->getObject(...)):

@@ -330,7 +330,6 @@ class S3
 		if (self::$useExceptions)
 			throw new S3Exception($message, $file, $line, $code);
 		else
-echo "LINE $line\n";
 			trigger_error($message, E_USER_WARNING);
 	}
 
@@ -345,7 +344,7 @@ echo "LINE $line\n";
 	{
 		$rest = new S3Request('GET', '', '', self::$endpoint);
 		$rest = $rest->getResponse();
-		if ($rest->error === false && $rest->code != 200 )
+		if ($rest->error === false && $rest->code !== 200 )
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false)
 		{
@@ -721,11 +720,6 @@ echo "LINE $line\n";
 				$saveTo = $saveto_or_range;
 				$range = false;
 			}
-		}
-
-		if(isset($range) && (!is_array($range) || count($range) !=2)) {
-			echo "ERROR: INVALID HTTP RANGE!\n";
-			return false;
 		}
 
 		$rest = new S3Request('GET', $bucket, $uri, self::$endpoint, $range);
