@@ -34,6 +34,13 @@
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
 * @version 0.5.0-dev
 */
+// Check for CURL
+if (!extension_loaded('curl') && !@dl(PHP_SHLIB_SUFFIX == 'so' ? 'curl.so' : 'php_curl.dll'))
+	throw new Exception("\nERROR: CURL extension not available and dynamic loading failed\n\n");
+
+// Try to use PECL Fileinfo for MIME types:
+if (!extension_loaded('fileinfo') && @dl('fileinfo.so')) $_ENV['MAGIC'] = '/usr/share/file/magic';
+
 class S3
 {
 	// ACL flags
@@ -323,6 +330,7 @@ class S3
 		if (self::$useExceptions)
 			throw new S3Exception($message, $file, $line, $code);
 		else
+echo "LINE $line\n";
 			trigger_error($message, E_USER_WARNING);
 	}
 
@@ -337,7 +345,7 @@ class S3
 	{
 		$rest = new S3Request('GET', '', '', self::$endpoint);
 		$rest = $rest->getResponse();
-		if ($rest->error === false && $rest->code !== 200)
+		if ($rest->error === false && $rest->code != 200 )
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false)
 		{
@@ -697,12 +705,30 @@ class S3
 	*
 	* @param string $bucket Bucket name
 	* @param string $uri Object URI
-	* @param mixed $saveTo Filename or resource to write to
+	* @param mixed $saveto_or_range Filename or resource to write to, or an array which represents the range of bytes to retrieve
+	* @param mixed $range An array which represents the range of bytes to retrieve
 	* @return mixed
 	*/
-	public static function getObject($bucket, $uri, $saveTo = false)
-	{
-		$rest = new S3Request('GET', $bucket, $uri, self::$endpoint);
+	public static function getObject($bucket, $uri, $saveto_or_range = null, $range=null)
+	{	$saveTo = false;
+
+		if(isset($range)) {
+			$saveTo = $saveto_or_range;
+		} elseif(isset($saveto_or_range)) {
+			if(is_array($saveto_or_range)) {
+				$range = $saveto_or_range;
+			} else {
+				$saveTo = $saveto_or_range;
+				$range = false;
+			}
+		}
+
+		if(isset($range) && (!is_array($range) || count($range) !=2)) {
+			echo "ERROR: INVALID HTTP RANGE!\n";
+			return false;
+		}
+
+		$rest = new S3Request('GET', $bucket, $uri, self::$endpoint, $range);
 		if ($saveTo !== false)
 		{
 			if (is_resource($saveTo))
@@ -710,13 +736,15 @@ class S3
 			else
 				if (($rest->fp = @fopen($saveTo, 'wb')) !== false)
 					$rest->file = realpath($saveTo);
-				else
+				else 
 					$rest->response->error = array('code' => 0, 'message' => 'Unable to open save file for writing: '.$saveTo);
+				
 		}
-		if ($rest->response->error === false) $rest->getResponse();
+		if(($saveTo && $rest->fp) || (!$saveTo)) $rest->getResponse();
 
-		if ($rest->response->error === false && $rest->response->code !== 200)
+		if ($rest->response->error === false && ($rest->response->code !== 200 && $rest->response->code !== 206))
 			$rest->response->error = array('code' => $rest->response->code, 'message' => 'Unexpected HTTP status');
+
 		if ($rest->response->error !== false)
 		{
 			self::__triggerError(sprintf("S3::getObject({$bucket}, {$uri}): [%s] %s",
@@ -1949,6 +1977,7 @@ final class S3Request
 	 */
 	public $response;
 
+        private $range = null;
 
 	/**
 	* Constructor
@@ -1957,15 +1986,22 @@ final class S3Request
 	* @param string $bucket Bucket name
 	* @param string $uri Object URI
 	* @param string $endpoint AWS endpoint URI
+	* @param array  $endpoint Array that has start and end bytes
 	* @return mixed
 	*/
-	function __construct($verb, $bucket = '', $uri = '', $endpoint = 's3.amazonaws.com')
+	function __construct($verb, $bucket = '', $uri = '', $endpoint = 's3.amazonaws.com', $range=null)
 	{
 		
 		$this->endpoint = $endpoint;
 		$this->verb = $verb;
 		$this->bucket = $bucket;
 		$this->uri = $uri !== '' ? '/'.str_replace('%2F', '/', rawurlencode($uri)) : '/';
+
+		if(isset($range) && $range !== null) {
+			$this->range = $range;
+		} else {
+			unset($this->range);
+		}
 
 		//if ($this->bucket !== '')
 		//	$this->resource = '/'.$this->bucket.$this->uri;
@@ -2073,6 +2109,8 @@ final class S3Request
 		// Basic setup
 		$curl = curl_init();
 		curl_setopt($curl, CURLOPT_USERAGENT, 'S3/php');
+
+		if(isset($this->range)) curl_setopt($curl, CURLOPT_RANGE, $this->range[0] . "-" . $this->range[1]);
 
 		if (S3::$useSSL)
 		{
