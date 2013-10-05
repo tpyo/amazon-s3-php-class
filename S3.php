@@ -120,8 +120,13 @@ class S3
 	 */
 	public static $useExceptions = false;
 
-	// SSL CURL SSL options - only needed if you are experiencing problems with your OpenSSL configuration
-	
+	/**
+	 * Time offset applied to time()
+	 * @access private
+	 * @static
+	 */
+	private static $__timeOffset = 0;
+
 	/**
 	 * SSL client key
 	 *
@@ -275,6 +280,30 @@ class S3
 	public static function setExceptions($enabled = true)
 	{
 		self::$useExceptions = $enabled;
+	}
+
+
+	/**
+	* Set AWS time correction offset (use carefully)
+	*
+	* This can be used when an inaccurate system time is generating
+	* invalid request signatures.  It should only be used as a last
+	* resort when the system time cannot be changed.
+	*
+	* @param string $offset Time offset (set to zero to use AWS server time)
+	* @return void
+	*/
+	public static function setTimeCorrectionOffset($offset = 0)
+	{
+		if ($offset == 0)
+		{
+			$rest = new S3Request('HEAD');
+			$rest = $rest->getResponse();
+			$awstime = $rest->headers['date'];
+			$systime = time();			
+			$offset = $systime > $awstime ? -($systime - $awstime) : ($awstime - $systime);
+		}
+		self::$__timeOffset = $offset;
 	}
 
 
@@ -1125,7 +1154,7 @@ class S3
 	*/
 	public static function getAuthenticatedURL($bucket, $uri, $lifetime, $hostBucket = false, $https = false)
 	{
-		$expires = time() + $lifetime;
+		$expires = self::__getTime() + $lifetime;
 		$uri = str_replace(array('%2F', '%2B'), array('/', '+'), rawurlencode($uri));
 		return sprintf(($https ? 'https' : 'http').'://%s/%s?AWSAccessKeyId=%s&Expires=%u&Signature=%s',
 		// $hostBucket ? $bucket : $bucket.'.s3.amazonaws.com', $uri, self::$__accessKey, $expires,
@@ -1168,7 +1197,7 @@ class S3
 		return self::getSignedPolicyURL(array(
 			'Statement' => array(
 				array('Resource' => $url, 'Condition' => array(
-					'DateLessThan' => array('AWS:EpochTime' => time() + $lifetime)
+					'DateLessThan' => array('AWS:EpochTime' => self::__getTime() + $lifetime)
 				))
 			)
 		));
@@ -1194,7 +1223,7 @@ class S3
 	{
 		// Create policy object
 		$policy = new stdClass;
-		$policy->expiration = gmdate('Y-m-d\TH:i:s\Z', (time() + $lifetime));
+		$policy->expiration = gmdate('Y-m-d\TH:i:s\Z', (self::__getTime() + $lifetime));
 		$policy->conditions = array();
 		$obj = new stdClass; $obj->bucket = $bucket; array_push($policy->conditions, $obj);
 		$obj = new stdClass; $obj->acl = $acl; array_push($policy->conditions, $obj);
@@ -1811,6 +1840,18 @@ class S3
 
 
 	/**
+	* Get the current time
+	*
+	* @internal Used to apply offsets to sytem time
+	* @return integer
+	*/
+	public static function __getTime()
+	{
+		return time() + self::$__timeOffset;
+	}
+
+
+	/**
 	* Generate the auth string: "AWS AccessKey:Signature"
 	*
 	* @internal Used by S3Request::getResponse()
@@ -2278,6 +2319,8 @@ final class S3Request
 			list($header, $value) = explode(': ', $data, 2);
 			if ($header == 'Last-Modified')
 				$this->response->headers['time'] = strtotime($value);
+			elseif ($header == 'Date')
+				$this->response->headers['date'] = strtotime($value);
 			elseif ($header == 'Content-Length')
 				$this->response->headers['size'] = (int)$value;
 			elseif ($header == 'Content-Type')
