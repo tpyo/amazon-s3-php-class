@@ -167,6 +167,8 @@ class S3
 	 */
 	private static $__signingKeyResource = false;
 
+	// Used by self::__utcstrtotime()
+	private static $__timezone = null;
 
 	/**
 	* Constructor - if you're not using the class statically
@@ -183,6 +185,10 @@ class S3
 			self::setAuth($accessKey, $secretKey);
 		self::$useSSL = $useSSL;
 		self::$endpoint = $endpoint;
+
+		/* Create the dummy UTC timezone object used by self::__utcstrtotime() */
+		if (self::$__timezone === null)
+			self::$__timezone = new DateTimeZone('UTC');
 	}
 
 
@@ -357,7 +363,7 @@ class S3
 			$results['buckets'] = array();
 			foreach ($rest->body->Buckets->Bucket as $b)
 				$results['buckets'][] = array(
-					'name' => (string)$b->Name, 'time' => strtotime((string)$b->CreationDate)
+					'name' => (string)$b->Name, 'time' => self::__utcstrtotime((string)$b->CreationDate)
 				);
 		} else
 			foreach ($rest->body->Buckets->Bucket as $b) $results[] = (string)$b->Name;
@@ -405,7 +411,7 @@ class S3
 		{
 			$results[(string)$c->Key] = array(
 				'name' => (string)$c->Key,
-				'time' => strtotime((string)$c->LastModified),
+				'time' => self::__utcstrtotime((string)$c->LastModified),
 				'size' => (int)$c->Size,
 				'hash' => substr((string)$c->ETag, 1, -1)
 			);
@@ -438,7 +444,7 @@ class S3
 			{
 				$results[(string)$c->Key] = array(
 					'name' => (string)$c->Key,
-					'time' => strtotime((string)$c->LastModified),
+					'time' => self::__utcstrtotime((string)$c->LastModified),
 					'size' => (int)$c->Size,
 					'hash' => substr((string)$c->ETag, 1, -1)
 				);
@@ -787,7 +793,7 @@ class S3
 			return false;
 		}
 		return isset($rest->body->LastModified, $rest->body->ETag) ? array(
-			'time' => strtotime((string)$rest->body->LastModified),
+			'time' => self::__utcstrtotime((string)$rest->body->LastModified),
 			'hash' => substr((string)$rest->body->ETag, 1, -1)
 		) : false;
 	}
@@ -1684,7 +1690,7 @@ class S3
 		{
 			$dist['id'] = (string)$node->Id;
 			$dist['status'] = (string)$node->Status;
-			$dist['time'] = strtotime((string)$node->LastModifiedTime);
+			$dist['time'] = self::__utcstrtotime((string)$node->LastModifiedTime);
 			$dist['domain'] = (string)$node->DomainName;
 		}
 
@@ -1839,6 +1845,23 @@ class S3
 		(str_pad(self::$__secretKey, 64, chr(0x00)) ^ (str_repeat(chr(0x5c), 64))) .
 		pack('H*', sha1((str_pad(self::$__secretKey, 64, chr(0x00)) ^
 		(str_repeat(chr(0x36), 64))) . $string)))));
+	}
+
+
+	/**
+	* Convert a UTC time string to a timestamp
+	*
+	* This function avoids PHP's silly irrelevant notices about
+	* setting the timezone.
+	*
+	* @internal Used wherever we are forced to parse time.
+	* @param string $time The UTC time to parse.
+	* @return int The unix timestamp for $time.
+	*/
+	private static function __utcstrtotime($time)
+	{
+		$t = new DateTime($time, self::$__timezone);
+		return $t->getTimestamp();
 	}
 
 }
@@ -2132,6 +2155,7 @@ final class S3Request
 		}
 
 		curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+		curl_setopt($curl, CURLOPT_FILETIME, true);
 		curl_setopt($curl, CURLOPT_HEADER, false);
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, false);
 		curl_setopt($curl, CURLOPT_WRITEFUNCTION, array(&$this, '__responseWriteCallback'));
@@ -2170,7 +2194,12 @@ final class S3Request
 
 		// Execute, grab errors
 		if (curl_exec($curl))
+		{
 			$this->response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+			$last_modified = curl_getinfo($curl, CURLINFO_FILETIME);
+			if ($last_modified > -1)
+				$this->response->headers['time'] = $last_modified;
+		}
 		else
 			$this->response->error = array(
 				'code' => curl_errno($curl),
@@ -2276,9 +2305,7 @@ final class S3Request
 			$data = trim($data);
 			if (strpos($data, ': ') === false) return $strlen;
 			list($header, $value) = explode(': ', $data, 2);
-			if ($header == 'Last-Modified')
-				$this->response->headers['time'] = strtotime($value);
-			elseif ($header == 'Content-Length')
+			if ($header == 'Content-Length')
 				$this->response->headers['size'] = (int)$value;
 			elseif ($header == 'Content-Type')
 				$this->response->headers['type'] = $value;
