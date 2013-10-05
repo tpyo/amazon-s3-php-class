@@ -32,7 +32,7 @@
 * Amazon S3 PHP class
 *
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
-* @version 0.5.0
+* @version 0.5.1-dev
 */
 class S3
 {
@@ -623,7 +623,7 @@ class S3
 			if (isset($requestHeaders['Content-Type']))
 				$input['type'] =& $requestHeaders['Content-Type'];
 			elseif (isset($input['file']))
-				$input['type'] = self::__getMimeType($input['file']);
+				$input['type'] = self::__getMIMEType($input['file']);
 			else
 				$input['type'] = 'application/octet-stream';
 		}
@@ -1767,24 +1767,8 @@ class S3
 	* @param string &$file File path
 	* @return string
 	*/
-	private static function __getMimeType(&$file)
+	private static function __getMIMEType(&$file)
 	{
-		// Use fileinfo if available
-		if (extension_loaded('fileinfo') && isset($_ENV['MAGIC']) &&
-		($finfo = finfo_open(FILEINFO_MIME, $_ENV['MAGIC'])) !== false)
-		{
-			if (($type = finfo_file($finfo, $file)) !== false)
-			{
-				// Remove the charset and grab the last content-type
-				$type = explode(' ', str_replace('; charset=', ';charset=', $type));
-				$type = array_pop($type);
-				$type = explode(';', $type);
-				$type = trim(array_shift($type));
-			}
-			finfo_close($finfo);
-			if ($type !== false && strlen($type) > 0) return $type;
-		}
-
 		static $exts = array(
 			'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif',
 			'png' => 'image/png', 'ico' => 'image/x-icon', 'pdf' => 'application/pdf',
@@ -1802,9 +1786,25 @@ class S3
 			'avi' => 'video/x-msvideo', 'mpg' => 'video/mpeg', 'mpeg' => 'video/mpeg',
 			'mov' => 'video/quicktime', 'flv' => 'video/x-flv', 'php' => 'text/x-php'
 		);
+
 		$ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-		// mime_content_type() is deprecated, fileinfo should be configured
-		$type = isset($exts[$ext]) ? $exts[$ext] : trim(mime_content_type($file));
+		if (isset($exts[$ext])) return $exts[$ext];
+
+		// Use fileinfo if available
+		if (extension_loaded('fileinfo') && isset($_ENV['MAGIC']) &&
+		($finfo = finfo_open(FILEINFO_MIME, $_ENV['MAGIC'])) !== false)
+		{
+			if (($type = finfo_file($finfo, $file)) !== false)
+			{
+				// Remove the charset and grab the last content-type
+				$type = explode(' ', str_replace('; charset=', ';charset=', $type));
+				$type = array_pop($type);
+				$type = explode(';', $type);
+				$type = trim(array_shift($type));
+			}
+			finfo_close($finfo);
+			if ($type !== false && strlen($type) > 0) return $type;
+		}
 
 		return ($type !== false && strlen($type) > 0) ? $type : 'application/octet-stream';
 	}
