@@ -1820,19 +1820,27 @@ class S3
 		if (isset($exts[$ext])) return $exts[$ext];
 
 		// Use fileinfo if available
-		if (extension_loaded('fileinfo') && isset($_ENV['MAGIC']) &&
-		($finfo = finfo_open(FILEINFO_MIME, $_ENV['MAGIC'])) !== false)
-		{
-			if (($type = finfo_file($finfo, $file)) !== false)
-			{
-				// Remove the charset and grab the last content-type
-				$type = explode(' ', str_replace('; charset=', ';charset=', $type));
-				$type = array_pop($type);
-				$type = explode(';', $type);
-				$type = trim(array_shift($type));
-			}
-			finfo_close($finfo);
-			if ($type !== false && strlen($type) > 0) return $type;
+    if (extension_loaded('fileinfo')) {
+      $magic = null;
+      if (isset($_ENV['MAGIC'])) // for PHP < 5.3.x
+      {
+        $magic = $_ENV['MAGIC'];
+      }
+
+      $finfo = finfo_open(FILEINFO_MIME, $magic);
+      if ($finfo !== false)
+      {
+        if (($type = finfo_file($finfo, $file)) !== false)
+        {
+          // Remove the charset and grab the last content-type
+          $type = explode(' ', str_replace('; charset=', ';charset=', $type));
+          $type = array_pop($type);
+          $type = explode(';', $type);
+          $type = trim(array_shift($type));
+        }
+        finfo_close($finfo);
+        if ($type !== false && strlen($type) > 0) return $type;
+      }
 		}
 
 		return ($type !== false && strlen($type) > 0) ? $type : 'application/octet-stream';
