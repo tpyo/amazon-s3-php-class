@@ -1843,7 +1843,7 @@ class S3
       }
 		}
 
-		return ($type !== false && strlen($type) > 0) ? $type : 'application/octet-stream';
+		return 'application/octet-stream';
 	}
 
 
