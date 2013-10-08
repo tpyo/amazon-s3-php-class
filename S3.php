@@ -1835,7 +1835,7 @@ class S3
 			if ($type !== false && strlen($type) > 0) return $type;
 		}
 
-		return ($type !== false && strlen($type) > 0) ? $type : 'application/octet-stream';
+		return 'application/octet-stream';
 	}
 
 
