@@ -381,7 +381,7 @@ class S3
 		{
 			if (isset($rest->body->Owner, $rest->body->Owner->ID, $rest->body->Owner->DisplayName))
 			$results['owner'] = array(
-				'id' => (string)$rest->body->Owner->ID, 'name' => (string)$rest->body->Owner->ID
+				'id' => (string)$rest->body->Owner->ID, 'name' => (string)$rest->body->Owner->DisplayName
 			);
 			$results['buckets'] = array();
 			foreach ($rest->body->Buckets->Bucket as $b)
