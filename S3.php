@@ -781,6 +781,23 @@ class S3
 
 
 	/**
+	* Get an object URL
+	*
+	* @param string $bucket Bucket name
+	* @param string $uri Object URI
+	* @param boolean $hostBucket Use the bucket name as the hostname
+	* @param boolean $https Use HTTPS ($hostBucket should be false for SSL verification)
+	* @return string
+	*/
+	public static function getObjectURL($bucket, $uri, $hostBucket = false, $https = false)
+	{
+		$uri = str_replace(array('%2F', '%2B'), array('/', '+'), rawurlencode($uri));
+		return sprintf(($https ? 'https' : 'http').'://%s/%s',
+		$hostBucket ? $bucket : self::$endpoint.'/'.$bucket, $uri);
+	}
+
+
+	/**
 	* Copy an object
 	*
 	* @param string $srcBucket Source bucket name
