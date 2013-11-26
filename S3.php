@@ -31,7 +31,10 @@
 /**
 * Amazon S3 PHP class
 *
+* Modified version of tpyo/amazon-s3-php-class project.
+*
 * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
+* @link https://github.com/eyesis/amazon-s3-php-class
 * @version 0.5.1-dev
 */
 class S3
