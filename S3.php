@@ -654,7 +654,8 @@ class S3
 			elseif (isset($input['file']))
 				$input['type'] = self::__getMIMEType($input['file']);
 			else
-				$input['type'] = 'application/octet-stream';
+				// $input['type'] = 'application/octet-stream';
+                $input['type'] = self::__getMIMETypeByData($input["data"]); // 'application/octet-stream';
 		}
 
 		if ($storageClass !== self::STORAGE_CLASS_STANDARD) // Storage class
@@ -1838,8 +1839,51 @@ class S3
 		return 'application/octet-stream';
 	}
 
+    /**
+     * Get MIME type from buffer files
+     *
+     * To override the putObject() Content-Type, add it to $requestHeaders
+     *
+     * To use fileinfo, ensure the MAGIC environment variable is set
+     *
+     * @internal Used to get mime types
+     * @param string $buffer file data
+     * @return string
+     */
 
-	/**
+    private static function __getMIMETypeByData($buffer) {
+        if (class_exists('finfo',false)){
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            return $finfo->buffer($buffer);
+        } else {
+            // http://stackoverflow.com/questions/5304503/determinate-mime-type-from-mysql-column
+            $Types = array("474946383761" => "image/gif", //GIF87a type gif
+                "474946383961" => "image/gif", //GIF89a type gif
+                "89504E470D0A1A0A" => "image/png", // PNG
+                "FFD8FFE0" => "image/jpeg", //JFIF jpeg
+                "FFD8FFE1" => "image/jpeg", //EXIF jpeg
+                "FFD8FFE8" => "image/jpeg", //SPIFF jpeg
+                "25504446" => "application/pdf", // Adobe PDF
+                "377ABCAF271C" => "application/zip", //7-Zip zip file
+                "504B0304" => "application/zip", //PK Zip file ( could also match other file types like docx, jar, etc )
+            );
+
+            $Signature = substr($data, 0, 60); //get first 60 bytes shouldnt need more then that to determine signature
+            $Unpack_Signature = unpack("H*", $Signature);
+            $Signature = array_shift($Unpack_Signature); //String representation of the hex values
+
+            foreach($Types as $MagicNumber => $Mime) {
+                if(stripos($Signature, $MagicNumber) === 0) {
+                    return $Mime;
+                }
+            }
+            //Return octet-stream (binary content type) if no signature is found
+            return "application/octet-stream";
+        }
+
+    }
+
+    /**
 	* Get the current time
 	*
 	* @internal Used to apply offsets to sytem time
