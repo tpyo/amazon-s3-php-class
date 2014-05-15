@@ -610,17 +610,26 @@ class S3
 	* @param array $requestHeaders Array of request headers or content type as a string
 	* @param constant $storageClass Storage class constant
 	* @param constant $serverSideEncryption Server-side encryption
+	* @param boolean $checkExistence Whether to check if the object was already there
 	* @return boolean
 	*/
-	public static function putObject($input, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array(), $storageClass = self::STORAGE_CLASS_STANDARD, $serverSideEncryption = self::SSE_NONE)
+	public static function putObject($input, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array(), $storageClass = self::STORAGE_CLASS_STANDARD, $serverSideEncryption = self::SSE_NONE, $checkExistence = false)
 	{
 		if ($input === false) return false;
-		$rest = new S3Request('PUT', $bucket, $uri, self::$endpoint);
 
 		if (!is_array($input)) $input = array(
 			'data' => $input, 'size' => strlen($input),
 			'md5sum' => base64_encode(md5($input, true))
 		);
+
+		if ($checkExistence && isset($input['md5sum'])) {
+			$response = self::getObjectInfo($bucket, $uri);
+			if (isset($response['hash']) && bin2hex(base64_decode($input['md5sum'])) == $response['hash']) {
+				return true;
+			}
+		}
+
+		$rest = new S3Request('PUT', $bucket, $uri, self::$endpoint);
 
 		// Data
 		if (isset($input['fp']))
