@@ -610,12 +610,14 @@ class S3
 	* @param array $requestHeaders Array of request headers or content type as a string
 	* @param constant $storageClass Storage class constant
 	* @param constant $serverSideEncryption Server-side encryption
+	* @param mixed $progressReporting Progress reporting configuration
 	* @return boolean
 	*/
-	public static function putObject($input, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array(), $storageClass = self::STORAGE_CLASS_STANDARD, $serverSideEncryption = self::SSE_NONE)
+	public static function putObject($input, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array(), $storageClass = self::STORAGE_CLASS_STANDARD, $serverSideEncryption = self::SSE_NONE, $progressReporting = null)
 	{
 		if ($input === false) return false;
 		$rest = new S3Request('PUT', $bucket, $uri, self::$endpoint);
+		self::_configureProgressReports($rest, $progressReporting);
 
 		if (!is_array($input)) $input = array(
 			'data' => $input, 'size' => strlen($input),
@@ -727,11 +729,13 @@ class S3
 	* @param string $bucket Bucket name
 	* @param string $uri Object URI
 	* @param mixed $saveTo Filename or resource to write to
+	* @param mixed $progressReporting Progress reporting configuration
 	* @return mixed
 	*/
-	public static function getObject($bucket, $uri, $saveTo = false)
+	public static function getObject($bucket, $uri, $saveTo = false, $progressReporting = null)
 	{
 		$rest = new S3Request('GET', $bucket, $uri, self::$endpoint);
+		self::_configureProgressReports($rest, $progressReporting);
 		if ($saveTo !== false)
 		{
 			if (is_resource($saveTo))
@@ -1882,6 +1886,43 @@ class S3
 		(str_repeat(chr(0x36), 64))) . $string)))));
 	}
 
+	/**
+	 * Parse progress report configuration and pass it on to the client
+	 * @param  S3Request $client        The request to configure
+	 * @param  mixed     $configuration The configuration to parse
+	 */
+	private static function _configureProgressReports($client, $configuration = null) {
+
+		if (is_callable($configuration)) {
+			// If we've been passed just a callback
+			$configuration = array('callback' => $configuration);
+		} else if (!isset($configuration)) {
+			// If we've not been passed anything, make sure we're dealing with an array
+			$configuration = array();
+		} else if (is_array($configuration)) {	
+			if (!isset($configuration['callback']) && !isset($configuration['accuracy']) && count($configuration)) {
+				// If this is a list rather than a map, convert it to a map
+				$arr = array('callback' => $configuration[0]);
+
+				if (count($configuration) > 1) {
+					$arr['accuracy'] = $configuration[1];
+				}
+
+				$configuration = $arr;
+			}
+		} else {
+			// We can't parse this, error out
+			self::__triggerError('Invalid progress report configuration', __FILE__, __LINE__);
+		}
+
+		$configuration = array_merge(array(
+			'callback' => null,
+			'accuracy' => null
+		), $configuration);
+
+		$client->configureProgressReporting($configuration['callback'], $configuration['accuracy']);
+	}
+
 }
 
 /**
@@ -1957,6 +1998,27 @@ final class S3Request
 	private $headers = array(
 		'Host' => '', 'Date' => '', 'Content-MD5' => '', 'Content-Type' => ''
 	);
+
+	/**
+	 * Callback to call with progress if there is one
+	 */
+	private $progressFunction = null;
+
+
+	/**
+	 * The progress of the request last time we reported it to the consumer
+	 *
+	 * This will only update if there has been a progressFunction set.
+	 * @var integer
+	 */
+	private $lastReportedProgress = 0;
+
+	/**
+	 * How much of a difference there much be between the current progress and the
+	 * last reported progress before we will report it again.
+	 * @var integer
+	 */
+	private $progressReportAccuracy = 0.01;
 
 	/**
 	 * Use HTTP PUT?
@@ -2082,6 +2144,25 @@ final class S3Request
 		$this->amzHeaders[$key] = $value;
 	}
 
+	/**
+	 * Set the functiuon to call with progress reports.
+	 * Pass null for the first parameter to disable progress reporting.
+	 * 
+	 * @param Callable $fn The function to call with progress reports
+	 * @param interger $accuracy The difference in progress reports before
+	 *                           we're willing to report a change. Set to 0
+	 *                           to report every progress change. 
+	 */
+	public function configureProgressReporting($fn, $accuracy = null)
+	{
+		$this->progressFunction = $fn;
+
+		if (!empty($accuracy))
+		{
+			$this->progressReportAccuracy = $accuracy;
+		}
+	}
+
 
 	/**
 	* Get the S3 response
@@ -2179,6 +2260,13 @@ final class S3Request
 		curl_setopt($curl, CURLOPT_HEADERFUNCTION, array(&$this, '__responseHeaderCallback'));
 		curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
 
+		if (!empty($this->progressFunction))
+		{
+			curl_setopt($curl, CURLOPT_NOPROGRESS, false);
+			curl_setopt($curl, CURLOPT_BUFFERSIZE, 128);
+			curl_setopt($curl, CURLOPT_PROGRESSFUNCTION, array($this, '_handleProgressReport'));
+		}
+
 		// Request types
 		switch ($this->verb)
 		{
@@ -2244,7 +2332,34 @@ final class S3Request
 		// Clean up file resources
 		if ($this->fp !== false && is_resource($this->fp)) fclose($this->fp);
 
+		if (!empty($this->progressFunction)) {
+			call_user_func($this->progressFunction, 1);
+		}
+
 		return $this->response;
+	}
+
+	/**
+	 * This function handles curl progress reports and passes them to the
+	 * consumer
+	 */
+	private function _handleProgressReport($totalDownload, $downloaded, $totalUpload, $uploaded)
+	{
+		if ($totalDownload > 0) {
+			return $this->_handleParsedProgressReport($totalDownload, $downloaded);
+		} else if ($totalUpload > 0) {
+			return $this->_handleParsedProgressReport($totalUpload, $uploaded);
+		}
+	}
+
+	private function _handleParsedProgressReport($total, $sofar) {
+		$progress = $sofar / $total;
+
+		if ($progress - $this->lastReportedProgress > $this->progressReportAccuracy) {
+			$this->lastReportedProgress = $progress;
+
+			call_user_func($this->progressFunction, $progress);
+		}
 	}
 
 	/**
