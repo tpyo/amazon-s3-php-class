@@ -1891,20 +1891,28 @@ class S3
 	 * @param  S3Request $client        The request to configure
 	 * @param  mixed     $configuration The configuration to parse
 	 */
-	private static function _configureProgressReports($client, $configuration = null) {
+	private static function _configureProgressReports($client, $configuration = null)
+	{
 
-		if (is_callable($configuration)) {
+		if (is_callable($configuration))
+		{
 			// If we've been passed just a callback
 			$configuration = array('callback' => $configuration);
-		} else if (!isset($configuration)) {
+		}
+		else if (!isset($configuration))
+		{
 			// If we've not been passed anything, make sure we're dealing with an array
 			$configuration = array();
-		} else if (is_array($configuration)) {	
-			if (!isset($configuration['callback']) && !isset($configuration['accuracy']) && count($configuration)) {
+		}
+		else if (is_array($configuration))
+		{	
+			if (!isset($configuration['callback']) && !isset($configuration['accuracy']) && count($configuration))
+			{
 				// If this is a list rather than a map, convert it to a map
 				$arr = array('callback' => $configuration[0]);
 
-				if (count($configuration) > 1) {
+				if (count($configuration) > 1)
+				{
 					$arr['accuracy'] = $configuration[1];
 				}
 
@@ -2352,10 +2360,15 @@ final class S3Request
 		}
 	}
 
-	private function _handleParsedProgressReport($total, $sofar) {
+	/**
+	 * This sends progress reports regardless of the current operation type
+	 */
+	private function _handleParsedProgressReport($total, $sofar)
+	{
 		$progress = $sofar / $total;
 
-		if ($progress - $this->lastReportedProgress > $this->progressReportAccuracy) {
+		if ($progress - $this->lastReportedProgress > $this->progressReportAccuracy)
+		{
 			$this->lastReportedProgress = $progress;
 
 			call_user_func($this->progressFunction, $progress);
