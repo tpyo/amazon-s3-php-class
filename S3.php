@@ -2351,8 +2351,13 @@ final class S3Request
 	 * This function handles curl progress reports and passes them to the
 	 * consumer
 	 */
-	private function _handleProgressReport($totalDownload, $downloaded, $totalUpload, $uploaded)
+	private function _handleProgressReport($ch = null, $totalDownload = 0, $downloaded = 0, $totalUpload = 0, $uploaded = 0)
 	{
+		if (!is_resource($ch)) {
+			list($totalDownload, $downloaded, $totalUpload, $uploaded) = func_get_args();
+			$ch = null;
+		}
+
 		if ($totalDownload > 0) {
 			return $this->_handleParsedProgressReport($totalDownload, $downloaded);
 		} else if ($totalUpload > 0) {
