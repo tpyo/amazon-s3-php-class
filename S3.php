@@ -1887,13 +1887,10 @@ class S3
 	}
 
 	/**
-	 * Parse progress report configuration and pass it on to the client
-	 * @param  S3Request $client        The request to configure
+	 * Parse progress report configuration
 	 * @param  mixed     $configuration The configuration to parse
 	 */
-	private static function _configureProgressReports($client, $configuration = null)
-	{
-
+	public static function parseProgressReportConfig($configuration) {
 		if (is_callable($configuration))
 		{
 			// If we've been passed just a callback
@@ -1927,6 +1924,18 @@ class S3
 			'callback' => null,
 			'accuracy' => null
 		), $configuration);
+
+		return $configuration;
+	}
+
+	/**
+	 * Parse progress report configuration and pass it on to the client
+	 * @param  S3Request $client        The request to configure
+	 * @param  mixed     $configuration The configuration to parse
+	 */
+	private static function _configureProgressReports($client, $configuration = null)
+	{
+		$configuration = self::parseProgressReportConfig($configuration);
 
 		$client->configureProgressReporting($configuration['callback'], $configuration['accuracy']);
 	}
