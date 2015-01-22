@@ -654,7 +654,8 @@ class S3
 
 		// Custom request headers (Content-Type, Content-Disposition, Content-Encoding)
 		if (is_array($requestHeaders))
-			foreach ($requestHeaders as $h => $v) $rest->setHeader($h, $v);
+			foreach ($requestHeaders as $h => $v)
+				strpos($h, 'x-amz-') === 0 ? $rest->setAmzHeader($h, $v) : $rest->setHeader($h, $v);
 		elseif (is_string($requestHeaders)) // Support for legacy contentType parameter
 			$input['type'] = $requestHeaders;
 
@@ -809,7 +810,8 @@ class S3
 	{
 		$rest = new S3Request('PUT', $bucket, $uri, self::$endpoint);
 		$rest->setHeader('Content-Length', 0);
-		foreach ($requestHeaders as $h => $v) $rest->setHeader($h, $v);
+		foreach ($requestHeaders as $h => $v)
+				strpos($h, 'x-amz-') === 0 ? $rest->setAmzHeader($h, $v) : $rest->setHeader($h, $v);
 		foreach ($metaHeaders as $h => $v) $rest->setAmzHeader('x-amz-meta-'.$h, $v);
 		if ($storageClass !== self::STORAGE_CLASS_STANDARD) // Storage class
 			$rest->setAmzHeader('x-amz-storage-class', $storageClass);
