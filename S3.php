@@ -570,6 +570,7 @@ class S3
 			self::__triggerError('S3::inputFile(): Unable to open input file: '.$file, __FILE__, __LINE__);
 			return false;
 		}
+		clearstatcache(false, $file);
 		return array('file' => $file, 'size' => filesize($file), 'md5sum' => $md5sum !== false ?
 		(is_string($md5sum) ? $md5sum : base64_encode(md5_file($file, true))) : '');
 	}
@@ -643,8 +644,10 @@ class S3
 		if (isset($input['size']) && $input['size'] >= 0)
 			$rest->size = $input['size'];
 		else {
-			if (isset($input['file']))
+			if (isset($input['file'])) {
+				clearstatcache(false, $input['file']);
 				$rest->size = filesize($input['file']);
+			}
 			elseif (isset($input['data']))
 				$rest->size = strlen($input['data']);
 		}
