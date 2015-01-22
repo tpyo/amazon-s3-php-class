@@ -74,6 +74,14 @@ class S3
 	 * @static
 	 */
 	private static $__sslKey = null;
+
+	/**
+	 * Default delimiter to be used, for example while getBucket().
+	 * @var string
+	 * @access public
+	 * @static 
+	 */
+	public static $defDelimiter = null;
 	
 	/**
 	 * AWS URI
@@ -416,6 +424,7 @@ class S3
 		if ($marker !== null && $marker !== '') $rest->setParameter('marker', $marker);
 		if ($maxKeys !== null && $maxKeys !== '') $rest->setParameter('max-keys', $maxKeys);
 		if ($delimiter !== null && $delimiter !== '') $rest->setParameter('delimiter', $delimiter);
+		else if (!empty(self::$defDelimiter)) $rest->setParameter('delimiter', self::$defDelimiter);
 		$response = $rest->getResponse();
 		if ($response->error === false && $response->code !== 200)
 			$response->error = array('code' => $response->code, 'message' => 'Unexpected HTTP status');
