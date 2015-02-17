@@ -2306,6 +2306,9 @@ final class S3Request
 	private function __dnsBucketName($bucket)
 	{
 		if (strlen($bucket) > 63 || preg_match("/[^a-z0-9\.-]/", $bucket) > 0) return false;
+		if(S3::$useSSL){ //using SSL, certs aren't valid for subdomains in new libcurl3
+			if (strstr($bucket, '.') !== false) return false;
+		}
 		if (strstr($bucket, '-.') !== false) return false;
 		if (strstr($bucket, '..') !== false) return false;
 		if (!preg_match("/^[0-9a-z]/", $bucket)) return false;
