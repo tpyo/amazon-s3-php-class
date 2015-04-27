@@ -56,7 +56,7 @@ class S3
 	 * @static
 	 */
 	private static $__accessKey = null;
-	
+
 	/**
 	 * AWS Secret Key
 	 *
@@ -65,7 +65,7 @@ class S3
 	 * @static
 	 */
 	private static $__secretKey = null;
-	
+
 	/**
 	 * SSL Client key
 	 *
@@ -82,7 +82,7 @@ class S3
 	 * @static 
 	 */
 	public static $defDelimiter = null;
-	
+
 	/**
 	 * AWS URI
 	 *
@@ -91,7 +91,7 @@ class S3
 	 * @static
 	 */
 	public static $endpoint = 's3.amazonaws.com';
-	
+
 	/**
 	 * Proxy information
 	 *
@@ -100,7 +100,7 @@ class S3
 	 * @static
 	 */
 	public static $proxy = null;
-	
+
 	/**
 	 * Connect using SSL?
 	 *
@@ -109,7 +109,7 @@ class S3
 	 * @static
 	 */
 	public static $useSSL = false;
-	
+
 	/**
 	 * Use SSL validation?
 	 *
@@ -118,7 +118,16 @@ class S3
 	 * @static
 	 */
 	public static $useSSLValidation = true;
-	
+
+	/**
+	 * Use SSL version
+	 *
+	 * @var const
+	 * @access public
+	 * @static
+	 */
+	public static $useSSLVersion = CURL_SSLVERSION_TLSv1;
+
 	/**
 	 * Use PHP exceptions?
 	 *
@@ -209,6 +218,7 @@ class S3
 	{
 		self::$endpoint = $host;
 	}
+
 
 	/**
 	* Set AWS access key and secret key
@@ -2131,6 +2141,9 @@ final class S3Request
 
 		if (S3::$useSSL)
 		{
+			// Set protocol version
+			curl_setopt($curl, CURLOPT_SSLVERSION, S3::$useSSLVersion);
+
 			// SSL Validation can now be optional for those with broken OpenSSL installations
 			curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, S3::$useSSLValidation ? 2 : 0);
 			curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, S3::$useSSLValidation ? 1 : 0);
