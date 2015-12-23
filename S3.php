@@ -123,11 +123,17 @@ class S3
 	/**
 	 * Use SSL version
 	 *
+	 * The CURL_SSLVERSION_* constants are not available in PHP < 5.5,
+	 * but their literal integer values values work.
+	 *
+	 * @link http://php.net/manual/en/function.curl-setopt.php
+	 * @link https://bugs.php.net/bug.php?id=62318
+	 *
 	 * @var const
 	 * @access public
 	 * @static
 	 */
-	public static $useSSLVersion = CURL_SSLVERSION_TLSv1;
+	public static $useSSLVersion = 1; // CURL_SSLVERSION_TLSv1
 
 	/**
 	 * Use PHP exceptions?
