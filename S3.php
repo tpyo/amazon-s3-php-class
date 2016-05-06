@@ -1189,6 +1189,27 @@ class S3
 
 
 	/**
+	* Get a query string authenticated URL to download an object
+	*
+	* @param string $bucket Bucket name
+	* @param string $uri Object URI
+	* @param integer $lifetime Lifetime in seconds
+	* @param boolean $hostBucket Use the bucket name as the hostname
+	* @param boolean $https Use HTTPS ($hostBucket should be false for SSL verification)
+	* @return string
+	*/
+	public static function getAuthenticatedDownloadURL($bucket, $uri, $lifetime, $hostBucket = false, $https = false)
+	{
+		$expires = self::__getTime() + $lifetime;
+		$uri = str_replace(array('%2F', '%2B'), array('/', '+'), rawurlencode($uri));
+		return sprintf(($https ? 'https' : 'http').'://%s/%s?AWSAccessKeyId=%s&Expires=%u&response-content-disposition=attachment&Signature=%s',
+		// $hostBucket ? $bucket : $bucket.'.s3.amazonaws.com', $uri, self::$__accessKey, $expires,
+		$hostBucket ? $bucket : self::$endpoint.'/'.$bucket, $uri, self::$__accessKey, $expires,
+		urlencode(self::__getHash("GET\n\n\n{$expires}\n/{$bucket}/{$uri}?response-content-disposition=attachment")));
+	}
+
+
+	/**
 	* Get a CloudFront signed policy URL
 	*
 	* @param array $policy Policy
