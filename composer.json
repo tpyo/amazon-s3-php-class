@@ -11,7 +11,8 @@
         }
     ],
     "require": {
-        "php": ">=5.2.0"
+        "php": ">=5.2.0",
+        "aws/aws-sdk-php": "3.*"
     },
     "autoload": {
         "classmap": ["S3.php"]
