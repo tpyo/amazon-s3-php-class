@@ -1921,7 +1921,7 @@ final class S3Request
 	 * AWS URI
 	 *
 	 * @var string
-	 * @access pricate
+	 * @access private
 	 */
 	private $endpoint;
 	
