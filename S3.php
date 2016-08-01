@@ -80,7 +80,7 @@ class S3
 	 * Default delimiter to be used, for example while getBucket().
 	 * @var string
 	 * @access public
-	 * @static 
+	 * @static
 	 */
 	public static $defDelimiter = null;
 
@@ -123,11 +123,17 @@ class S3
 	/**
 	 * Use SSL version
 	 *
+	 * The CURL_SSLVERSION_* constants are not available in PHP < 5.5,
+	 * but their literal integer values values work.
+	 *
+	 * @link http://php.net/manual/en/function.curl-setopt.php
+	 * @link https://bugs.php.net/bug.php?id=62318
+	 *
 	 * @var const
 	 * @access public
 	 * @static
 	 */
-	public static $useSSLVersion = CURL_SSLVERSION_TLSv1;
+	public static $useSSLVersion = 1; // CURL_SSLVERSION_TLSv1
 
 	/**
 	 * Use PHP exceptions?
@@ -153,7 +159,7 @@ class S3
 	 * @static
 	 */
 	public static $sslKey = null;
-	
+
 	/**
 	 * SSL client certfificate
 	 *
@@ -162,7 +168,7 @@ class S3
 	 * @static
 	 */
 	public static $sslCert = null;
-	
+
 	/**
 	 * SSL CA cert (only required if you are having problems with your system CA cert)
 	 *
@@ -171,7 +177,7 @@ class S3
 	 * @static
 	 */
 	public static $sslCACert = null;
-	
+
 	/**
 	 * AWS Key Pair ID
 	 *
@@ -180,13 +186,13 @@ class S3
 	 * @static
 	 */
 	private static $__signingKeyPairId = null;
-	
+
 	/**
 	 * Key resource, freeSigningKey() must be called to clear it from memory
 	 *
 	 * @var bool
 	 * @access private
-	 * @static 
+	 * @static
 	 */
 	private static $__signingKeyResource = false;
 
@@ -319,7 +325,7 @@ class S3
 			$rest = new S3Request('HEAD');
 			$rest = $rest->getResponse();
 			$awstime = $rest->headers['date'];
-			$systime = time();			
+			$systime = time();
 			$offset = $systime > $awstime ? -($systime - $awstime) : ($awstime - $systime);
 		}
 		self::$__timeOffset = $offset;
@@ -1827,7 +1833,7 @@ class S3
 			'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif',
 			'png' => 'image/png', 'ico' => 'image/x-icon', 'pdf' => 'application/pdf',
 			'tif' => 'image/tiff', 'tiff' => 'image/tiff', 'svg' => 'image/svg+xml',
-			'svgz' => 'image/svg+xml', 'swf' => 'application/x-shockwave-flash', 
+			'svgz' => 'image/svg+xml', 'swf' => 'application/x-shockwave-flash',
 			'zip' => 'application/zip', 'gz' => 'application/x-gzip',
 			'tar' => 'application/x-tar', 'bz' => 'application/x-bzip',
 			'bz2' => 'application/x-bzip2',  'rar' => 'application/x-rar-compressed',
@@ -1910,7 +1916,7 @@ class S3
 }
 
 /**
- * S3 Request class 
+ * S3 Request class
  *
  * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
  * @version 0.5.0-dev
@@ -1924,7 +1930,7 @@ final class S3Request
 	 * @access private
 	 */
 	private $endpoint;
-	
+
 	/**
 	 * Verb
 	 *
@@ -1932,7 +1938,7 @@ final class S3Request
 	 * @access private
 	 */
 	private $verb;
-	
+
 	/**
 	 * S3 bucket name
 	 *
@@ -1940,7 +1946,7 @@ final class S3Request
 	 * @access private
 	 */
 	private $bucket;
-	
+
 	/**
 	 * Object URI
 	 *
@@ -1948,7 +1954,7 @@ final class S3Request
 	 * @access private
 	 */
 	private $uri;
-	
+
 	/**
 	 * Final object URI
 	 *
@@ -1956,7 +1962,7 @@ final class S3Request
 	 * @access private
 	 */
 	private $resource = '';
-	
+
 	/**
 	 * Additional request parameters
 	 *
@@ -1964,7 +1970,7 @@ final class S3Request
 	 * @access private
 	 */
 	private $parameters = array();
-	
+
 	/**
 	 * Amazon specific request headers
 	 *
@@ -2027,7 +2033,7 @@ final class S3Request
 	*/
 	function __construct($verb, $bucket = '', $uri = '', $endpoint = 's3.amazonaws.com')
 	{
-		
+
 		$this->endpoint = $endpoint;
 		$this->verb = $verb;
 		$this->bucket = $bucket;
