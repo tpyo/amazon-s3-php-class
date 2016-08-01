@@ -80,7 +80,7 @@ class S3
 	 * Default delimiter to be used, for example while getBucket().
 	 * @var string
 	 * @access public
-	 * @static 
+	 * @static
 	 */
 	public static $defDelimiter = null;
 
@@ -153,7 +153,7 @@ class S3
 	 * @static
 	 */
 	public static $sslKey = null;
-	
+
 	/**
 	 * SSL client certfificate
 	 *
@@ -162,7 +162,7 @@ class S3
 	 * @static
 	 */
 	public static $sslCert = null;
-	
+
 	/**
 	 * SSL CA cert (only required if you are having problems with your system CA cert)
 	 *
@@ -171,7 +171,7 @@ class S3
 	 * @static
 	 */
 	public static $sslCACert = null;
-	
+
 	/**
 	 * AWS Key Pair ID
 	 *
@@ -180,13 +180,13 @@ class S3
 	 * @static
 	 */
 	private static $__signingKeyPairId = null;
-	
+
 	/**
 	 * Key resource, freeSigningKey() must be called to clear it from memory
 	 *
 	 * @var bool
 	 * @access private
-	 * @static 
+	 * @static
 	 */
 	private static $__signingKeyResource = false;
 
@@ -319,7 +319,7 @@ class S3
 			$rest = new S3Request('HEAD');
 			$rest = $rest->getResponse();
 			$awstime = $rest->headers['date'];
-			$systime = time();			
+			$systime = time();
 			$offset = $systime > $awstime ? -($systime - $awstime) : ($awstime - $systime);
 		}
 		self::$__timeOffset = $offset;
@@ -1177,14 +1177,25 @@ class S3
 	* @param boolean $https Use HTTPS ($hostBucket should be false for SSL verification)
 	* @return string
 	*/
-	public static function getAuthenticatedURL($bucket, $uri, $lifetime, $hostBucket = false, $https = false)
+	public static function getAuthenticatedURL($bucket, $uri, $lifetime, $hostBucket = false, $https = false, $headers = false)
 	{
 		$expires = self::__getTime() + $lifetime;
-		$uri = str_replace(array('%2F', '%2B'), array('/', '+'), rawurlencode($uri));
-		return sprintf(($https ? 'https' : 'http').'://%s/%s?AWSAccessKeyId=%s&Expires=%u&Signature=%s',
-		// $hostBucket ? $bucket : $bucket.'.s3.amazonaws.com', $uri, self::$__accessKey, $expires,
-		$hostBucket ? $bucket : self::$endpoint.'/'.$bucket, $uri, self::$__accessKey, $expires,
-		urlencode(self::__getHash("GET\n\n\n{$expires}\n/{$bucket}/{$uri}")));
+		$uri = str_replace(array('%2F', '%2B'), array('/', '+'), rawurlencode($uri)); // URI should be encoded (thanks Sean O'Dea)
+
+		$finalUrl = sprintf(($https ? 'https' : 'http').'://%s/%s?',
+		$hostBucket ? $bucket : $bucket.'.s3.amazonaws.com', $uri);
+		$requestToSign = "GET\n\n\n{$expires}\n/{$bucket}/{$uri}";
+		if (is_array($headers)) {
+			ksort($headers); // AMZ servers reject signatures if headers are not in alphabetical order
+			$appendString = '?';
+			foreach ($headers as $header => $value) {
+				$finalUrl .= $header . '=' . urlencode($value) . '&';
+				$requestToSign .= $appendString . $header . '=' . $value;
+				$appendString = '&';
+			}
+		}
+		$finalUrl .= 'AWSAccessKeyId=' . self::$__accessKey . '&Expires=' . $expires . '&Signature=' . urlencode(self::__getHash($requestToSign));
+		return $finalUrl;
 	}
 
 
@@ -1827,7 +1838,7 @@ class S3
 			'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif',
 			'png' => 'image/png', 'ico' => 'image/x-icon', 'pdf' => 'application/pdf',
 			'tif' => 'image/tiff', 'tiff' => 'image/tiff', 'svg' => 'image/svg+xml',
-			'svgz' => 'image/svg+xml', 'swf' => 'application/x-shockwave-flash', 
+			'svgz' => 'image/svg+xml', 'swf' => 'application/x-shockwave-flash',
 			'zip' => 'application/zip', 'gz' => 'application/x-gzip',
 			'tar' => 'application/x-tar', 'bz' => 'application/x-bzip',
 			'bz2' => 'application/x-bzip2',  'rar' => 'application/x-rar-compressed',
@@ -1910,7 +1921,7 @@ class S3
 }
 
 /**
- * S3 Request class 
+ * S3 Request class
  *
  * @link http://undesigned.org.za/2007/10/22/amazon-s3-php-class
  * @version 0.5.0-dev
@@ -1924,7 +1935,7 @@ final class S3Request
 	 * @access private
 	 */
 	private $endpoint;
-	
+
 	/**
 	 * Verb
 	 *
@@ -1932,7 +1943,7 @@ final class S3Request
 	 * @access private
 	 */
 	private $verb;
-	
+
 	/**
 	 * S3 bucket name
 	 *
@@ -1940,7 +1951,7 @@ final class S3Request
 	 * @access private
 	 */
 	private $bucket;
-	
+
 	/**
 	 * Object URI
 	 *
@@ -1948,7 +1959,7 @@ final class S3Request
 	 * @access private
 	 */
 	private $uri;
-	
+
 	/**
 	 * Final object URI
 	 *
@@ -1956,7 +1967,7 @@ final class S3Request
 	 * @access private
 	 */
 	private $resource = '';
-	
+
 	/**
 	 * Additional request parameters
 	 *
@@ -1964,7 +1975,7 @@ final class S3Request
 	 * @access private
 	 */
 	private $parameters = array();
-	
+
 	/**
 	 * Amazon specific request headers
 	 *
@@ -2027,7 +2038,7 @@ final class S3Request
 	*/
 	function __construct($verb, $bucket = '', $uri = '', $endpoint = 's3.amazonaws.com')
 	{
-		
+
 		$this->endpoint = $endpoint;
 		$this->verb = $verb;
 		$this->bucket = $bucket;
