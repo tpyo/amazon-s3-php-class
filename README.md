@@ -55,6 +55,24 @@ Save an object to a resource of any type:
 ```php
 S3::getObject($bucketName, $uploadName, fopen('savefile.txt', 'wb'))
 ```
+#### This fork adds the ability to grab ranges of HTTP requests.
+Get an object range of bytes:
+
+```php
+S3::getObject($bucketName, $uploadName, array(1,10))
+```
+
+Save an object to file:
+
+```php
+S3::getObject($bucketName, $uploadName, $saveName, array(2048-16384))
+```
+
+Save an object to a resource of any type:
+
+```php
+S3::getObject($bucketName, $uploadName, fopen('savefile.txt', 'wb'), array(1,100))
+```
 
 #### Copying and deleting objects
 
