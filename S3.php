@@ -190,6 +190,15 @@ class S3
 	 */
 	private static $__signingKeyResource = false;
 
+	/**
+	 * curl timeout
+	 *
+	 * @var int
+	 * @access public
+	 * @static
+	 */
+	public static $curlTimeout = 60;
+
 
 	/**
 	* Constructor - if you're not using the class statically
@@ -353,6 +362,16 @@ class S3
 	{
 		if (self::$__signingKeyResource !== false)
 			openssl_free_key(self::$__signingKeyResource);
+	}
+
+	/**
+	 * Sets the curl timeout from the default of 60 seconds (use 0 for no timeout)
+	 *
+	 * @return void
+	 */
+	public static function setTimeout($timeout)
+	{
+		self::$curlTimeout = $timeout;
 	}
 
 
@@ -2206,6 +2225,7 @@ final class S3Request
 		curl_setopt($curl, CURLOPT_WRITEFUNCTION, array(&$this, '__responseWriteCallback'));
 		curl_setopt($curl, CURLOPT_HEADERFUNCTION, array(&$this, '__responseHeaderCallback'));
 		curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+		curl_setopt($curl, CURLOPT_TIMEOUT, S3::$curlTimeout);
 
 		// Request types
 		switch ($this->verb)
