@@ -94,6 +94,19 @@ class S3
 	public static $endpoint = 's3.amazonaws.com';
 
 	/**
+	 * Force path style for bucket endpoint
+	 *
+	 * Instead of using the DNS name of the bucket (e.g. BUCKET.s3.amazonaws.com)
+	 * use the path style (e.g. s3.amazonaws.com/BUCKET/). This is useful when
+	 * using a custom endpoint.
+	 *
+	 * @var bool
+	 * @acess public
+	 * @static
+	 */
+	public static $forcePathStyle = false;
+
+	/**
 	 * Proxy information
 	 *
 	 * @var null|array
@@ -200,12 +213,13 @@ class S3
 	* @param string $endpoint Amazon URI
 	* @return void
 	*/
-	public function __construct($accessKey = null, $secretKey = null, $useSSL = false, $endpoint = 's3.amazonaws.com')
+	public function __construct($accessKey = null, $secretKey = null, $useSSL = false, $endpoint = 's3.amazonaws.com', $forcePathStyle = false)
 	{
 		if ($accessKey !== null && $secretKey !== null)
 			self::setAuth($accessKey, $secretKey);
 		self::$useSSL = $useSSL;
 		self::$endpoint = $endpoint;
+		self::$forcePathStyle = $forcePathStyle;
 	}
 
 
@@ -218,6 +232,17 @@ class S3
 	public function setEndpoint($host)
 	{
 		self::$endpoint = $host;
+	}
+
+	/**
+	* Use bucket path style
+	*
+	* @param bool $enabled Use path style
+	* @return void
+	*/
+	public function setForcePathStyle($enabled = 1)
+	{
+		self::$forcePathStyle = $enabled;
 	}
 
 
@@ -383,7 +408,7 @@ class S3
 	*/
 	public static function listBuckets($detailed = false)
 	{
-		$rest = new S3Request('GET', '', '', self::$endpoint);
+		$rest = new S3Request('GET', '', '', self::$endpoint, self::$forcePathStyle);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
@@ -429,7 +454,7 @@ class S3
 	*/
 	public static function getBucket($bucket, $prefix = null, $marker = null, $maxKeys = null, $delimiter = null, $returnCommonPrefixes = false)
 	{
-		$rest = new S3Request('GET', $bucket, '', self::$endpoint);
+		$rest = new S3Request('GET', $bucket, '', self::$endpoint, self::$forcePathStyle);
 		if ($maxKeys == 0) $maxKeys = null;
 		if ($prefix !== null && $prefix !== '') $rest->setParameter('prefix', $prefix);
 		if ($marker !== null && $marker !== '') $rest->setParameter('marker', $marker);
@@ -475,7 +500,7 @@ class S3
 		if ($maxKeys == null && $nextMarker !== null && (string)$response->body->IsTruncated == 'true')
 		do
 		{
-			$rest = new S3Request('GET', $bucket, '', self::$endpoint);
+			$rest = new S3Request('GET', $bucket, '', self::$endpoint, self::$forcePathStyle);
 			if ($prefix !== null && $prefix !== '') $rest->setParameter('prefix', $prefix);
 			$rest->setParameter('marker', $nextMarker);
 			if ($delimiter !== null && $delimiter !== '') $rest->setParameter('delimiter', $delimiter);
@@ -517,7 +542,7 @@ class S3
 	*/
 	public static function putBucket($bucket, $acl = self::ACL_PRIVATE, $location = false)
 	{
-		$rest = new S3Request('PUT', $bucket, '', self::$endpoint);
+		$rest = new S3Request('PUT', $bucket, '', self::$endpoint, self::$forcePathStyle);
 		$rest->setAmzHeader('x-amz-acl', $acl);
 
 		if ($location !== false)
@@ -553,7 +578,7 @@ class S3
 	*/
 	public static function deleteBucket($bucket)
 	{
-		$rest = new S3Request('DELETE', $bucket, '', self::$endpoint);
+		$rest = new S3Request('DELETE', $bucket, '', self::$endpoint, self::$forcePathStyle);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 204)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
@@ -636,7 +661,7 @@ class S3
 	public static function putObject($input, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array(), $storageClass = self::STORAGE_CLASS_STANDARD, $serverSideEncryption = self::SSE_NONE)
 	{
 		if ($input === false) return false;
-		$rest = new S3Request('PUT', $bucket, $uri, self::$endpoint);
+		$rest = new S3Request('PUT', $bucket, $uri, self::$endpoint, self::$forcePathStyle);
 
 		if (!is_array($input)) $input = array(
 			'data' => $input, 'size' => strlen($input),
@@ -755,7 +780,7 @@ class S3
 	*/
 	public static function getObject($bucket, $uri, $saveTo = false)
 	{
-		$rest = new S3Request('GET', $bucket, $uri, self::$endpoint);
+		$rest = new S3Request('GET', $bucket, $uri, self::$endpoint, self::$forcePathStyle);
 		if ($saveTo !== false)
 		{
 			if (is_resource($saveTo))
@@ -790,7 +815,7 @@ class S3
 	*/
 	public static function getObjectInfo($bucket, $uri, $returnInfo = true)
 	{
-		$rest = new S3Request('HEAD', $bucket, $uri, self::$endpoint);
+		$rest = new S3Request('HEAD', $bucket, $uri, self::$endpoint, self::$forcePathStyle);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && ($rest->code !== 200 && $rest->code !== 404))
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
@@ -819,7 +844,7 @@ class S3
 	*/
 	public static function copyObject($srcBucket, $srcUri, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array(), $storageClass = self::STORAGE_CLASS_STANDARD)
 	{
-		$rest = new S3Request('PUT', $bucket, $uri, self::$endpoint);
+		$rest = new S3Request('PUT', $bucket, $uri, self::$endpoint, self::$forcePathStyle);
 		$rest->setHeader('Content-Length', 0);
 		foreach ($requestHeaders as $h => $v)
 				strpos($h, 'x-amz-') === 0 ? $rest->setAmzHeader($h, $v) : $rest->setHeader($h, $v);
@@ -856,7 +881,7 @@ class S3
 	*/
 	public static function setBucketRedirect($bucket = NULL, $location = NULL)
 	{
-		$rest = new S3Request('PUT', $bucket, '', self::$endpoint);
+		$rest = new S3Request('PUT', $bucket, '', self::$endpoint, self::$forcePathStyle);
 
 		if( empty($bucket) || empty($location) ) {
 			self::__triggerError("S3::setBucketRedirect({$bucket}, {$location}): Empty parameter.", __FILE__, __LINE__);
@@ -933,7 +958,7 @@ class S3
 		}
 		$dom->appendChild($bucketLoggingStatus);
 
-		$rest = new S3Request('PUT', $bucket, '', self::$endpoint);
+		$rest = new S3Request('PUT', $bucket, '', self::$endpoint, self::$forcePathStyle);
 		$rest->setParameter('logging', null);
 		$rest->data = $dom->saveXML();
 		$rest->size = strlen($rest->data);
@@ -962,7 +987,7 @@ class S3
 	*/
 	public static function getBucketLogging($bucket)
 	{
-		$rest = new S3Request('GET', $bucket, '', self::$endpoint);
+		$rest = new S3Request('GET', $bucket, '', self::$endpoint, self::$forcePathStyle);
 		$rest->setParameter('logging', null);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
@@ -1001,7 +1026,7 @@ class S3
 	*/
 	public static function getBucketLocation($bucket)
 	{
-		$rest = new S3Request('GET', $bucket, '', self::$endpoint);
+		$rest = new S3Request('GET', $bucket, '', self::$endpoint, self::$forcePathStyle);
 		$rest->setParameter('location', null);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
@@ -1065,7 +1090,7 @@ class S3
 		$accessControlPolicy->appendChild($accessControlList);
 		$dom->appendChild($accessControlPolicy);
 
-		$rest = new S3Request('PUT', $bucket, $uri, self::$endpoint);
+		$rest = new S3Request('PUT', $bucket, $uri, self::$endpoint, self::$forcePathStyle);
 		$rest->setParameter('acl', null);
 		$rest->data = $dom->saveXML();
 		$rest->size = strlen($rest->data);
@@ -1092,7 +1117,7 @@ class S3
 	*/
 	public static function getAccessControlPolicy($bucket, $uri = '')
 	{
-		$rest = new S3Request('GET', $bucket, $uri, self::$endpoint);
+		$rest = new S3Request('GET', $bucket, $uri, self::$endpoint, self::$forcePathStyle);
 		$rest->setParameter('acl', null);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 200)
@@ -1153,7 +1178,7 @@ class S3
 	*/
 	public static function deleteObject($bucket, $uri)
 	{
-		$rest = new S3Request('DELETE', $bucket, $uri, self::$endpoint);
+		$rest = new S3Request('DELETE', $bucket, $uri, self::$endpoint, self::$forcePathStyle);
 		$rest = $rest->getResponse();
 		if ($rest->error === false && $rest->code !== 204)
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
@@ -2025,7 +2050,7 @@ final class S3Request
 	* @param string $endpoint AWS endpoint URI
 	* @return mixed
 	*/
-	function __construct($verb, $bucket = '', $uri = '', $endpoint = 's3.amazonaws.com')
+	function __construct($verb, $bucket = '', $uri = '', $endpoint = 's3.amazonaws.com', $forcePathStyle = 0)
 	{
 		
 		$this->endpoint = $endpoint;
@@ -2040,7 +2065,7 @@ final class S3Request
 
 		if ($this->bucket !== '')
 		{
-			if ($this->__dnsBucketName($this->bucket))
+			if ($this->__dnsBucketName($this->bucket) && !$forcePathStyle)
 			{
 				$this->headers['Host'] = $this->bucket.'.'.$this->endpoint;
 				$this->resource = '/'.$this->bucket.$this->uri;
