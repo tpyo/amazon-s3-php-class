@@ -670,7 +670,13 @@ class S3
 			if (isset($input['md5sum'])) $rest->setHeader('Content-MD5', $input['md5sum']);
 
 			$rest->setAmzHeader('x-amz-acl', $acl);
-			foreach ($metaHeaders as $h => $v) $rest->setAmzHeader('x-amz-meta-'.$h, $v);
+      foreach ($metaHeaders as $h => $v) {
+        if(substr($h, 0, 6) == "x-amz-") {
+          $rest->setAmzHeader($h, $v);
+        } else {
+          $rest->setAmzHeader('x-amz-meta-'.$h, $v);
+        }
+      }
 			$rest->getResponse();
 		} else
 			$rest->response->error = array('code' => 0, 'message' => 'Missing input parameters');
