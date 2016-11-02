@@ -694,7 +694,13 @@ class S3
 			if (isset($input['md5sum'])) $rest->setHeader('Content-MD5', $input['md5sum']);
 
 			$rest->setAmzHeader('x-amz-acl', $acl);
-			foreach ($metaHeaders as $h => $v) $rest->setAmzHeader('x-amz-meta-'.$h, $v);
+      foreach ($metaHeaders as $h => $v) {
+        if(substr($h, 0, 6) == "x-amz-") {
+          $rest->setAmzHeader($h, $v);
+        } else {
+          $rest->setAmzHeader('x-amz-meta-'.$h, $v);
+        }
+      }
 			$rest->getResponse();
 		} else
 			$rest->response->error = array('code' => 0, 'message' => 'Missing input parameters');
@@ -1845,19 +1851,27 @@ class S3
 		if (isset($exts[$ext])) return $exts[$ext];
 
 		// Use fileinfo if available
-		if (extension_loaded('fileinfo') && isset($_ENV['MAGIC']) &&
-		($finfo = finfo_open(FILEINFO_MIME, $_ENV['MAGIC'])) !== false)
-		{
-			if (($type = finfo_file($finfo, $file)) !== false)
-			{
-				// Remove the charset and grab the last content-type
-				$type = explode(' ', str_replace('; charset=', ';charset=', $type));
-				$type = array_pop($type);
-				$type = explode(';', $type);
-				$type = trim(array_shift($type));
-			}
-			finfo_close($finfo);
-			if ($type !== false && strlen($type) > 0) return $type;
+    if (extension_loaded('fileinfo')) {
+      $magic = null;
+      if (isset($_ENV['MAGIC'])) // for PHP < 5.3.x
+      {
+        $magic = $_ENV['MAGIC'];
+      }
+
+      $finfo = finfo_open(FILEINFO_MIME, $magic);
+      if ($finfo !== false)
+      {
+        if (($type = finfo_file($finfo, $file)) !== false)
+        {
+          // Remove the charset and grab the last content-type
+          $type = explode(' ', str_replace('; charset=', ';charset=', $type));
+          $type = array_pop($type);
+          $type = explode(';', $type);
+          $type = trim(array_shift($type));
+        }
+        finfo_close($finfo);
+        if ($type !== false && strlen($type) > 0) return $type;
+      }
 		}
 
 		return 'application/octet-stream';
