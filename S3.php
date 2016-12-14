@@ -190,6 +190,14 @@ class S3
 	 */
 	private static $__signingKeyResource = false;
 
+	/**
+	 * AWS Signature Version
+	 *
+	 * @var string
+	 * @acess public
+	 * @static
+	 */
+	public static $signVer = 'v2';
 
 	/**
 	* Constructor - if you're not using the class statically
@@ -198,6 +206,7 @@ class S3
 	* @param string $secretKey Secret key
 	* @param boolean $useSSL Enable SSL
 	* @param string $endpoint Amazon URI
+	* @param string $region Bucket Region
 	* @return void
 	*/
 	public function __construct($accessKey = null, $secretKey = null, $useSSL = false, $endpoint = 's3.amazonaws.com')
@@ -341,6 +350,18 @@ class S3
 		file_get_contents($signingKey) : $signingKey)) !== false) return true;
 		self::__triggerError('S3::setSigningKey(): Unable to open load private key: '.$signingKey, __FILE__, __LINE__);
 		return false;
+	}
+
+
+	/**
+	* Set Signature Version
+	*
+	* @param string $version of signature ('v4' or 'v2')
+	* @return void
+	*/
+	public static function setSignatureVersion($version = 'v2')
+	{
+		self::$signVer = $version;
 	}
 
 
@@ -583,7 +604,7 @@ class S3
 		}
 		clearstatcache(false, $file);
 		return array('file' => $file, 'size' => filesize($file), 'md5sum' => $md5sum !== false ?
-		(is_string($md5sum) ? $md5sum : base64_encode(md5_file($file, true))) : '');
+		(is_string($md5sum) ? $md5sum : base64_encode(md5_file($file, true))) : '', 'sha256sum' => hash_file('sha256', $file));
 	}
 
 
@@ -640,7 +661,8 @@ class S3
 
 		if (!is_array($input)) $input = array(
 			'data' => $input, 'size' => strlen($input),
-			'md5sum' => base64_encode(md5($input, true))
+			'md5sum' => base64_encode(md5($input, true)),
+			'sha256sum' => hash('sha256', $input)
 		);
 
 		// Data
@@ -692,6 +714,8 @@ class S3
 		{
 			$rest->setHeader('Content-Type', $input['type']);
 			if (isset($input['md5sum'])) $rest->setHeader('Content-MD5', $input['md5sum']);
+
+			if (isset($input['sha256sum'])) $rest->setAmzHeader('x-amz-content-sha256', $input['sha256sum']);
 
 			$rest->setAmzHeader('x-amz-acl', $acl);
 			foreach ($metaHeaders as $h => $v) $rest->setAmzHeader('x-amz-meta-'.$h, $v);
@@ -1907,6 +1931,105 @@ class S3
 		(str_repeat(chr(0x36), 64))) . $string)))));
 	}
 
+
+	/**
+	* Generate the headers for AWS Signature V4
+	* @internal Used by S3Request::getResponse()
+	* @param array $aheaders amzHeaders 
+	* @param array $headers
+	* @param string $method 
+	* @param string $uri
+	* @param array $parameters
+	* @return array $headers
+	*/
+	public static function __getSignatureV4($aHeaders, $headers, $method='GET', $uri='', $parameters=array())
+	{
+		// calculate the service name and region from the endpoint hostname: dynamodb.us-east-1.amazonaws.com
+		list( $service, $region, $junk ) = explode( '.', self::$endpoint );
+		
+		$algorithm = 'AWS4-HMAC-SHA256';
+		$amzHeaders = array();
+		$amzRequests = array();
+		
+		$date = new DateTime( 'UTC' );
+		$amzDate =  $date->format( 'Ymd\THis\Z' );
+		$amzDateStamp = $date->format( 'Ymd' );
+
+		// amz-date ISO8601 format ? for aws request		
+		$amzHeaders['x-amz-date'] = $amzDate;
+
+		// CanonicalHeaders
+		foreach ( $headers as $k => $v ) {
+			$amzHeaders[ strtolower( $k ) ] = trim( $v );
+		} 
+		foreach ( $aHeaders as $k => $v ) {
+			$amzHeaders[ strtolower( $k ) ] = trim( $v );
+		} 
+		uksort( $amzHeaders, 'strcmp' );
+
+		// payload
+		$payloadHash = isset($amzHeaders['x-amz-content-sha256']) ? $amzHeaders['x-amz-content-sha256'] :  hash('sha256', '');
+
+		// CanonicalRequests
+		$amzRequests[] = $method;
+		$amzRequests[] = $uri;
+		$amzRequests[] = http_build_query($parameters);		
+		// add header as string to requests
+		foreach ( $amzHeaders as $k => $v ) {
+			$amzRequests[] = $k . ':' . $v;
+		}
+		// add a blank entry so we end up with an extra line break
+		$amzRequests[] = '';
+		// SignedHeaders
+		$amzRequests[] = implode( ';', array_keys( $amzHeaders ) );
+		// payload hash
+		$amzRequests[] = $payloadHash;
+		// request as string
+		$amzRequestStr = implode("\n", $amzRequests);
+		
+		// CredentialScope
+		$credentialScope = array();
+		$credentialScope[] = $amzDateStamp;
+		$credentialScope[] = $region;
+		$credentialScope[] = $service;
+		$credentialScope[] = 'aws4_request';
+
+		// stringToSign
+		$stringToSign = array();
+		$stringToSign[] = $algorithm;
+		$stringToSign[] = $amzDate;
+		$stringToSign[] = implode('/', $credentialScope);
+		$stringToSign[] =  hash('sha256', $amzRequestStr);
+		// as string
+		$stringToSignStr = implode("\n", $stringToSign);
+
+		// Make Signature
+		$kSecret = 'AWS4' . self::$__secretKey;
+		$kDate = hash_hmac( 'sha256', $amzDateStamp, $kSecret, true );
+		$kRegion = hash_hmac( 'sha256', $region, $kDate, true );
+		$kService = hash_hmac( 'sha256', $service, $kRegion, true );
+		$kSigning = hash_hmac( 'sha256', 'aws4_request', $kService, true );
+		
+		$signature = hash_hmac( 'sha256', $stringToSignStr, $kSigning );
+
+		$authorization = array(
+			'Credential=' . self::$__accessKey . '/' . implode( '/', $credentialScope ),
+			'SignedHeaders=' . implode( ';', array_keys( $amzHeaders ) ),
+			'Signature=' . $signature,
+		);
+
+		$authorizationStr = $algorithm . ' ' . implode( ',', $authorization );
+
+		$resultHeaders = array( 
+			'X-AMZ-DATE' => $amzDate,			
+			'Authorization' => $authorizationStr
+		);
+		if (!isset($aHeaders['x-amz-content-sha256'])) $resultHeaders['x-amz-content-sha256'] = $payloadHash;
+
+		return $resultHeaders;
+	}
+
+
 }
 
 /**
@@ -2190,13 +2313,27 @@ final class S3Request
 				$headers[] = 'Authorization: ' . S3::__getSignature($this->headers['Date']);
 			else
 			{
-				$headers[] = 'Authorization: ' . S3::__getSignature(
-					$this->verb."\n".
-					$this->headers['Content-MD5']."\n".
-					$this->headers['Content-Type']."\n".
-					$this->headers['Date'].$amz."\n".
-					$this->resource
-				);
+				if (S3::$signVer == 'v2')
+				{
+					$headers[] = 'Authorization: ' . S3::__getSignature(
+						$this->verb."\n".
+						$this->headers['Content-MD5']."\n".
+						$this->headers['Content-Type']."\n".
+						$this->headers['Date'].$amz."\n".
+						$this->resource
+					);
+				} else {
+					$amzHeaders = S3::__getSignatureV4(
+						$this->amzHeaders,
+						$this->headers, 
+						$this->verb, 
+						$this->uri,
+						$this->parameters
+					);
+					foreach ($amzHeaders as $k => $v) {
+						$headers[] = $k .': '. $v;
+					}
+				}
 			}
 		}
 
