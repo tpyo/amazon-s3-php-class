@@ -190,6 +190,15 @@ class S3
 	 */
 	private static $__signingKeyResource = false;
 
+	/**
+	 * CURL progress function callback 
+	 *
+	 * @var function
+	 * @access public
+	 * @static 
+	 */
+	public static $progressFunction = null;
+
 
 	/**
 	* Constructor - if you're not using the class statically
@@ -353,6 +362,17 @@ class S3
 	{
 		if (self::$__signingKeyResource !== false)
 			openssl_free_key(self::$__signingKeyResource);
+	}
+
+	/**
+	* Set progress function
+	*
+	* @param function $func Progress function 
+	* @return void
+	*/
+	public static function setProgressFunction($func = null)
+	{
+		self::$progressFunction = $func;
 	}
 
 
@@ -2235,6 +2255,12 @@ final class S3Request
 				curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'DELETE');
 			break;
 			default: break;
+		}
+
+		// set curl progress function callback
+		if (S3::$progressFunction) {
+			curl_setopt($curl, CURLOPT_NOPROGRESS, false);
+			curl_setopt($curl, CURLOPT_PROGRESSFUNCTION, S3::$progressFunction);
 		}
 
 		// Execute, grab errors
