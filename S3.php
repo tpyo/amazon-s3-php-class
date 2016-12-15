@@ -519,6 +519,7 @@ class S3
 	{
 		$rest = new S3Request('PUT', $bucket, '', self::$endpoint);
 		$rest->setAmzHeader('x-amz-acl', $acl);
+		$rest->setHeader('Content-Length', 0);
 
 		if ($location !== false)
 		{
@@ -2319,6 +2320,10 @@ final class S3Request
 	*/
 	private function __dnsBucketName($bucket)
 	{
+ 		## FIXME
+ 		## FOR TEMP : no dns bucket support now ##
+ 		return false;
+
 		if (strlen($bucket) > 63 || preg_match("/[^a-z0-9\.-]/", $bucket) > 0) return false;
 		if (S3::$useSSL && strstr($bucket, '.') !== false) return false;
 		if (strstr($bucket, '-.') !== false) return false;
