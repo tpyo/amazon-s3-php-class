@@ -206,7 +206,6 @@ class S3
 	* @param string $secretKey Secret key
 	* @param boolean $useSSL Enable SSL
 	* @param string $endpoint Amazon URI
-	* @param string $region Bucket Region
 	* @return void
 	*/
 	public function __construct($accessKey = null, $secretKey = null, $useSSL = false, $endpoint = 's3.amazonaws.com')
