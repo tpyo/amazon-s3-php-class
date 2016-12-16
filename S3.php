@@ -1984,10 +1984,9 @@ class S3
 	* @param string $method 
 	* @param string $uri
 	* @param string $data
-	* @param array $parameters
 	* @return array $headers
 	*/
-	public static function __getSignatureV4($aHeaders, $headers, $method='GET', $uri='', $data = '', $parameters=array())
+	public static function __getSignatureV4($aHeaders, $headers, $method='GET', $uri='', $data = '')
 	{		
 		$service = 's3';
 		$region = S3::getRegion();
@@ -2014,10 +2013,17 @@ class S3
 		// payload
 		$payloadHash = isset($amzHeaders['x-amz-content-sha256']) ? $amzHeaders['x-amz-content-sha256'] :  hash('sha256', $data);
 
+		// parameters
+		$parameters = array();
+		if (strpos($uri, '?')) {
+			list ($uri, $query_str) = @explode("?", $uri);
+			parse_str($query_str, $parameters);
+		}
+
 		// CanonicalRequests
 		$amzRequests[] = $method;
 		$amzRequests[] = $uri;
-		$amzRequests[] = http_build_query($parameters);		
+		$amzRequests[] = http_build_query($parameters);
 		// add header as string to requests
 		foreach ( $amzHeaders as $k => $v ) {
 			$amzRequests[] = $k . ':' . $v;
@@ -2372,8 +2378,7 @@ final class S3Request
 						$this->headers, 
 						$this->verb, 
 						$this->uri,
-						$this->data,
-						$this->parameters
+						$this->data
 					);
 					foreach ($amzHeaders as $k => $v) {
 						$headers[] = $k .': '. $v;
