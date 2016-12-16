@@ -94,6 +94,15 @@ class S3
 	public static $endpoint = 's3.amazonaws.com';
 
 	/**
+	 * AWS Region
+	 *
+	 * @var string
+	 * @acess public
+	 * @static
+	 */
+	public static $region = '';
+
+	/**
 	 * Proxy information
 	 *
 	 * @var null|array
@@ -208,12 +217,13 @@ class S3
 	* @param string $endpoint Amazon URI
 	* @return void
 	*/
-	public function __construct($accessKey = null, $secretKey = null, $useSSL = false, $endpoint = 's3.amazonaws.com')
+	public function __construct($accessKey = null, $secretKey = null, $useSSL = false, $endpoint = 's3.amazonaws.com', $region = '')
 	{
 		if ($accessKey !== null && $secretKey !== null)
 			self::setAuth($accessKey, $secretKey);
 		self::$useSSL = $useSSL;
 		self::$endpoint = $endpoint;
+		self::$region = $region;
 	}
 
 
@@ -226,6 +236,39 @@ class S3
 	public function setEndpoint($host)
 	{
 		self::$endpoint = $host;
+	}
+
+
+	/**
+	* Set the service region
+	*
+	* @param string $region
+	* @return void
+	*/
+	public function setRegion($region)
+	{
+		self::$region = $region;
+	}
+
+
+	/**
+	* Get the service region
+	*
+	* @return string $region
+	* @static
+	*/
+	public static function getRegion()
+	{
+		$region = self::$region;
+
+		// parse region from endpoint if not specific
+		if (empty($region)) {
+			if (preg_match("/s3[.-](?:website-|dualstack\.)?(.+)\.amazonaws\.com/i",self::$endpoint,$match) !== 0 && strtolower($match[1]) !== "external-1") {
+				$region = $match[1];
+			}		
+		}
+
+		return empty($region) ? 'us-east-1' : $region;
 	}
 
 
@@ -539,6 +582,8 @@ class S3
 	{
 		$rest = new S3Request('PUT', $bucket, '', self::$endpoint);
 		$rest->setAmzHeader('x-amz-acl', $acl);
+
+		if ($location === false) $location = self::getRegion();
 
 		if ($location !== false)
 		{
@@ -1938,13 +1983,14 @@ class S3
 	* @param array $headers
 	* @param string $method 
 	* @param string $uri
+	* @param string $data
 	* @param array $parameters
 	* @return array $headers
 	*/
-	public static function __getSignatureV4($aHeaders, $headers, $method='GET', $uri='', $parameters=array())
-	{
-		// calculate the service name and region from the endpoint hostname: dynamodb.us-east-1.amazonaws.com
-		list( $service, $region, $junk ) = explode( '.', self::$endpoint );
+	public static function __getSignatureV4($aHeaders, $headers, $method='GET', $uri='', $data = '', $parameters=array())
+	{		
+		$service = 's3';
+		$region = S3::getRegion();
 		
 		$algorithm = 'AWS4-HMAC-SHA256';
 		$amzHeaders = array();
@@ -1966,7 +2012,7 @@ class S3
 		uksort( $amzHeaders, 'strcmp' );
 
 		// payload
-		$payloadHash = isset($amzHeaders['x-amz-content-sha256']) ? $amzHeaders['x-amz-content-sha256'] :  hash('sha256', '');
+		$payloadHash = isset($amzHeaders['x-amz-content-sha256']) ? $amzHeaders['x-amz-content-sha256'] :  hash('sha256', $data);
 
 		// CanonicalRequests
 		$amzRequests[] = $method;
@@ -2326,6 +2372,7 @@ final class S3Request
 						$this->headers, 
 						$this->verb, 
 						$this->uri,
+						$this->data,
 						$this->parameters
 					);
 					foreach ($amzHeaders as $k => $v) {
