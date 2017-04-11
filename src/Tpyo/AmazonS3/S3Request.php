@@ -129,7 +129,7 @@ final class S3Request
 	public $data = false;
 
 	/**
-	 * S3 request respone
+	 * S3 request response
 	 *
 	 * @var object
 	 * @access public
@@ -146,7 +146,7 @@ final class S3Request
 	* @param string $endpoint AWS endpoint URI
 	* @return mixed
 	*/
-	function __construct($verb, $bucket = '', $uri = '', $endpoint = 's3.amazonaws.com')
+	function __construct($verb, $bucket = '', $uri = '', $endpoint = 's3.amazonaws.com', $options = [])
 	{
 		$this->endpoint = $endpoint;
 		$this->verb = $verb;
@@ -158,9 +158,14 @@ final class S3Request
 		//else
 		//	$this->resource = $this->uri;
 
+		if (!isset($options['useBucketDNS']))
+		{
+			$options['useBucketDNS'] = true;
+		}
+
 		if ($this->bucket !== '')
 		{
-			if ($this->__dnsBucketName($this->bucket))
+			if ($options['useBucketDNS'] && $this->__dnsBucketName($this->bucket))
 			{
 				$this->headers['Host'] = $this->bucket.'.'.$this->endpoint;
 				$this->resource = '/'.$this->bucket.$this->uri;

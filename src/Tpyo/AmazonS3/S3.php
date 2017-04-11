@@ -83,7 +83,7 @@ class S3
 	 * Default delimiter to be used, for example while getBucket().
 	 * @var string
 	 * @access public
-	 * @static 
+	 * @static
 	 */
 	public static $defDelimiter = null;
 
@@ -193,6 +193,14 @@ class S3
 	 */
 	private static $__signingKeyResource = false;
 
+	/**
+	 * S3Request options
+	 *
+	 * @var bool
+	 * @access public
+	 * @static
+	 */
+	public static $requestOptions = [];
 
 	/**
 	* Constructor - if you're not using the class statically
@@ -209,8 +217,21 @@ class S3
 			self::setAuth($accessKey, $secretKey);
 		self::$useSSL = $useSSL;
 		self::$endpoint = $endpoint;
+		self::$requestOptions = [
+			"useBucketDNS" => true
+		];
 	}
 
+	/**
+	 * Set S3Request options
+	 *
+	 * @param string $k option key
+	 * @param string $v option value
+	 * @return void
+	 */
+	public function setS3RequestOption($k, $v) {
+		self::$requestOptions[$k] = $v;
+	}
 
 	/**
 	* Set the service endpoint
@@ -519,7 +540,7 @@ class S3
 	*/
 	public static function putBucket($bucket, $acl = self::ACL_PRIVATE, $location = false)
 	{
-		$rest = new S3Request('PUT', $bucket, '', self::$endpoint);
+		$rest = new S3Request('PUT', $bucket, '', self::$endpoint, self::$requestOptions);
 		$rest->setAmzHeader('x-amz-acl', $acl);
 
 		if ($location !== false)
