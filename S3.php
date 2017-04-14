@@ -585,7 +585,7 @@ class S3
 
 		if ($location === false) $location = self::getRegion();
 
-		if ($location !== false)
+		if ($location !== false && $location !== "us-east-1")
 		{
 			$dom = new DOMDocument;
 			$createBucketConfiguration = $dom->createElement('CreateBucketConfiguration');
@@ -1776,11 +1776,13 @@ class S3
 		if ($comment !== '') $distributionConfig->appendChild($dom->createElement('Comment', $comment));
 		$distributionConfig->appendChild($dom->createElement('Enabled', $enabled ? 'true' : 'false'));
 
-		$trusted = $dom->createElement('TrustedSigners');
-		foreach ($trustedSigners as $id => $type)
-			$trusted->appendChild($id !== '' ? $dom->createElement($type, $id) : $dom->createElement($type));
-		$distributionConfig->appendChild($trusted);
-
+		if (!empty($trustedSigners))
+		{
+			$trusted = $dom->createElement('TrustedSigners');
+			foreach ($trustedSigners as $id => $type)
+				$trusted->appendChild($id !== '' ? $dom->createElement($type, $id) : $dom->createElement($type));
+			$distributionConfig->appendChild($trusted);
+		}
 		$dom->appendChild($distributionConfig);
 		//var_dump($dom->saveXML());
 		return $dom->saveXML();
@@ -2022,7 +2024,8 @@ class S3
 
 		// CanonicalRequests
 		$amzRequests[] = $method;
-		$amzRequests[] = $uri;
+		$uriQmPos = strpos($uri, '?'); 
+		$amzRequests[] = ($uriQmPos === false ? $uri : substr($uri, 0, $uriQmPos));
 		$amzRequests[] = http_build_query($parameters);
 		// add header as string to requests
 		foreach ( $amzHeaders as $k => $v ) {
