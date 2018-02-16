@@ -2025,13 +2025,15 @@ final class S3Request
 	* @param string $endpoint AWS endpoint URI
 	* @return mixed
 	*/
-	function __construct($verb, $bucket = '', $uri = '', $endpoint = 's3.amazonaws.com')
+	function __construct($verb, $bucket = '', $uri = '', $endpoint = 's3.amazonaws.com', $connTimeout = 30, $execTimeout = 30)
 	{
 		
 		$this->endpoint = $endpoint;
 		$this->verb = $verb;
 		$this->bucket = $bucket;
 		$this->uri = $uri !== '' ? '/'.str_replace('%2F', '/', rawurlencode($uri)) : '/';
+		$this->connTimeout = $connTimeout;
+		$this->execTimeout = $execTimeout;
 
 		//if ($this->bucket !== '')
 		//	$this->resource = '/'.$this->bucket.$this->uri;
@@ -2163,6 +2165,10 @@ final class S3Request
 			if (isset(S3::$proxy['user'], S3::$proxy['pass']) && S3::$proxy['user'] != null && S3::$proxy['pass'] != null)
 				curl_setopt($curl, CURLOPT_PROXYUSERPWD, sprintf('%s:%s', S3::$proxy['user'], S3::$proxy['pass']));
 		}
+
+		// Timeouts
+		curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, $this->connTimeout);
+		curl_setopt($curl, CURLOPT_TIMEOUT, $this->execTimeout);
 
 		// Headers
 		$headers = array(); $amz = array();
