@@ -14,15 +14,6 @@ Statically (e,g; S3::getObject(...)):
 S3::setAuth($awsAccessKey, $awsSecretKey);
 ```
 
-### AWS V4 Signature
-
-```php
-$s3->setSignatureVersion('v4);
-```
-Or statically
-```php
-S3::setSignatureVersion('v4');
-```
 
 ### Object Operations
 
