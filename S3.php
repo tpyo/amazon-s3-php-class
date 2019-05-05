@@ -2501,15 +2501,16 @@ final class S3Request
 			$data = trim($data);
 			if (strpos($data, ': ') === false) return $strlen;
 			list($header, $value) = explode(': ', $data, 2);
-			if ($header == 'Last-Modified')
+			$header = strtolower($header);
+			if ($header == 'last-modified')
 				$this->response->headers['time'] = strtotime($value);
-			elseif ($header == 'Date')
+			elseif ($header == 'date')
 				$this->response->headers['date'] = strtotime($value);
-			elseif ($header == 'Content-Length')
+			elseif ($header == 'content-length')
 				$this->response->headers['size'] = (int)$value;
-			elseif ($header == 'Content-Type')
+			elseif ($header == 'content-type')
 				$this->response->headers['type'] = $value;
-			elseif ($header == 'ETag')
+			elseif ($header == 'etag')
 				$this->response->headers['hash'] = $value{0} == '"' ? substr($value, 1, -1) : $value;
 			elseif (preg_match('/^x-amz-meta-.*$/', $header))
 				$this->response->headers[$header] = $value;
