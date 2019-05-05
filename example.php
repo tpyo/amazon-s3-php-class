@@ -35,9 +35,6 @@ if (awsAccessKey == 'change-this' || awsSecretKey == 'change-this')
 // Instantiate the class
 $s3 = new S3(awsAccessKey, awsSecretKey);
 
-// using v4 signature
-$s3->setSignatureVersion('v4');
-
 // List your buckets:
 echo "S3::listBuckets(): ".print_r($s3->listBuckets(), 1)."\n";
 
