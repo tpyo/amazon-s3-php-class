@@ -703,6 +703,10 @@ class S3
 	*/
 	public static function putObject($input, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array(), $storageClass = self::STORAGE_CLASS_STANDARD, $serverSideEncryption = self::SSE_NONE)
 	{
+		# need to set cache control without updating entire code in any project
+		$requestHeaders["Cache-Control"] = "max-age=2592000";
+		$requestHeaders["Expires"] = gmdate("D, d M Y H:i:s T", strtotime("+30 Day"));
+
 		if ($input === false) return false;
 		$rest = new S3Request('PUT', $bucket, $uri, self::$endpoint);
 
