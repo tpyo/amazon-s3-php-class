@@ -49,6 +49,9 @@ class S3
 	const SSE_NONE = '';
 	const SSE_AES256 = 'AES256';
 
+	const SigV2 = 'sigv2';
+	const SigV4 = 'sigv4';
+
 	/**
 	 * Default credentials to access AWS
 	 *
@@ -2410,7 +2413,7 @@ final class S3Request
 		if (S3::hasAuth())
 		{
 			// Authorization string (CloudFront stringToSign should only contain a date)
-			if ($this->headers['Host'] === 'cloudfront.amazonaws.com')
+			if ($this->endpoint->signatureVersion === S3::SigV2 || $this->headers['Host'] === 'cloudfront.amazonaws.com')
 			{
 				# TODO: Update CloudFront authentication
 				foreach ($this->amzHeaders as $header => $value)
@@ -2632,6 +2635,13 @@ final class EndpointConfig
 	const DEFAULT_HOST = 's3.amazonaws.com';
 
 	/**
+	 * Auth signature version
+	 *
+	 * @var string
+	 */
+	public $signatureVersion = S3::SigV4;
+
+	/**
 	 * Enable SSL
 	 *
 	 * @var bool
@@ -2725,6 +2735,12 @@ final class EndpointConfig
 	public function withSSLVersion($sslVersion = CURL_SSLVERSION_TLSv1)
 	{
 		$this->useSSLVersion = $sslVersion;
+		return $this;
+	}
+
+	public function withSignatureVersion($version = S3::SigV4)
+	{
+		$this->signatureVersion = $version;
 		return $this;
 	}
 
