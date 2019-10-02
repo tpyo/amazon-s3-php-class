@@ -5,25 +5,18 @@
 * S3 form upload example
 */
 
-if (!class_exists('S3')) require_once 'S3.php';
+require_once 'vendor/autoload.php';
 
-// AWS access info
-if (!defined('awsAccessKey')) define('awsAccessKey', 'change-this');
-if (!defined('awsSecretKey')) define('awsSecretKey', 'change-this');
+// File to upload, we'll use this file since it exists
+list($uploadFile) = get_included_files();
 
-// Check for CURL
-if (!extension_loaded('curl') && !@dl(PHP_SHLIB_SUFFIX == 'so' ? 'curl.so' : 'php_curl.dll'))
-	exit("\nERROR: CURL extension not loaded\n\n");
+// Initialise S3
+S3::Init(
+	new Credentials(_getenv('ACCESS_KEY'), _getenv('SECRET_KEY')),
+	_getenv('REGION', 'us-west-1')
+);
 
-// Pointless without your keys!
-if (awsAccessKey == 'change-this' || awsSecretKey == 'change-this')
-	exit("\nERROR: AWS access information required\n\nPlease edit the following lines in this file:\n\n".
-	"define('awsAccessKey', 'change-me');\ndefine('awsSecretKey', 'change-me');\n\n");
-
-
-S3::setAuth(awsAccessKey, awsSecretKey);
-
-$bucket = 'upload-bucket';
+$bucket = _getenv('BUCKET_NAME', 'upload-bucket');
 $path = 'myfiles/'; // Can be empty ''
 
 $lifetime = 3600; // Period for which the parameters are valid

@@ -21,5 +21,8 @@
     },
     "autoload": {
         "classmap": ["S3.php"]
+    },
+    "autoload-dev": {
+        "files": ["example-helpers.php"]
     }
 }
