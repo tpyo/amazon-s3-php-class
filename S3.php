@@ -28,6 +28,24 @@
 * Amazon S3 is a trademark of Amazon.com, Inc. or its affiliates.
 */
 
+if (getenv('SIGNATURE_DEBUG') === 'ON') {
+	function SigDebug($format)
+	{
+		$args = func_get_args();
+		if (count($args) === 0) {
+			return;
+		}
+
+		$args[0] .= "\n";
+		array_unshift($args, STDERR);
+		call_user_func_array('fprintf', $args);
+	}
+} else {
+	function SigDebug()
+	{}
+}
+
+
 /**
 * Amazon S3 PHP class
 *
@@ -2141,19 +2159,28 @@ class S3
 		// request as string
 		$amzPayloadStr = implode("\n", $amzPayload);
 
+		SigDebug('Payload to sign: [%s]', $amzPayloadStr);
+
 		// CredentialScope
 		$credentialScope = array($amzDateStamp, $region, $service, 'aws4_request');
 
 		// stringToSign
-		$stringToSignStr = implode("\n", array($algorithm, $amzHeaders['x-amz-date'], 
-		implode('/', $credentialScope), hash('sha256', $amzPayloadStr)));
+		$stringToSignStr = implode("\n", array($algorithm, $amzHeaders['x-amz-date'],
+			implode('/', $credentialScope), hash('sha256', $amzPayloadStr)));
+
+		SigDebug('String to sign: [%s]', $stringToSignStr);
 
 		// Make Signature
 		$kSecret = 'AWS4' . $creds->secretKey;
+		SigDebug('$kSecret: %s', crc32($kSecret));
 		$kDate = hash_hmac('sha256', $amzDateStamp, $kSecret, true);
+		SigDebug('$kDate: %s', crc32($kDate));
 		$kRegion = hash_hmac('sha256', $region, $kDate, true);
+		SigDebug('$kRegion: %s', crc32($kRegion));
 		$kService = hash_hmac('sha256', $service, $kRegion, true);
+		SigDebug('$kService: %s', crc32($kService));
 		$kSigning = hash_hmac('sha256', 'aws4_request', $kService, true);
+		SigDebug('$kSigning: %s', crc32($kSigning));
 
 		$signature = hash_hmac('sha256', $stringToSignStr, $kSigning);
 
