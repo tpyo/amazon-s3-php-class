@@ -12,7 +12,7 @@ list($uploadFile) = get_included_files();
 
 // Initialise S3
 S3::Init(
-	new Credentials(_getenv('ACCESS_KEY'), _getenv('SECRET_KEY')),
+	new S3Credentials(_getenv('ACCESS_KEY'), _getenv('SECRET_KEY')),
 	_getenv('REGION', 'us-west-1')
 );
 

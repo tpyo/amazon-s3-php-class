@@ -13,12 +13,12 @@ list($uploadFile) = get_included_files();
 
 $region = _getenv('REGION');
 
-$endpoint = new EndpointConfig(_getenv('ENDPOINT'), $region);
+$endpoint = new S3EndpointConfig(_getenv('ENDPOINT'), $region);
 $endpoint
     ->withPathStyleEnabled(_getenv('USE_PATH_STYLE', 'YES') === 'YES')
     ->withSSLEnabled(_getenv('USE_SSL', 'NO') === 'YES');
 
-$creds = new Credentials(_getenv('ACCESS_KEY'), _getenv('SECRET_KEY'));
+$creds = new S3Credentials(_getenv('ACCESS_KEY'), _getenv('SECRET_KEY'));
 
 $bucketName = _getenv('BUCKET');
 

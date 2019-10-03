@@ -73,14 +73,14 @@ class S3
 	/**
 	 * Default credentials to access AWS
 	 *
-	 * @var Credentials|null
+	 * @var S3Credentials|null
 	 */
 	private static $__defaultCredentials;
 
 	/**
 	 * Default endpoint
 	 *
-	 * @var EndpointConfig|null
+	 * @var S3EndpointConfig|null
 	 */
 	private static $__defaultEndpoint;
 
@@ -160,10 +160,10 @@ class S3
 		$creds = null;
 		if ($accessKey !== null && $secretKey !== null)
 		{
-			$creds = new Credentials($accessKey, $secretKey);
+			$creds = new S3Credentials($accessKey, $secretKey);
 		}
 
-		$endpointCfg = new EndpointConfig($endpoint);
+		$endpointCfg = new S3EndpointConfig($endpoint);
 		$endpointCfg->withSSLEnabled($useSSL);
 
 		self::Init($creds, $region, $endpointCfg);
@@ -172,18 +172,18 @@ class S3
 	/**
 	 * Initialise default parameters
 	 *
-	 * @param Credentials $credentials Default credentials
+	 * @param S3Credentials $credentials Default credentials
 	 * @param string $region Auth region for SigV4
-	 * @param EndpointConfig|null $endpoint Endpoint configuration, null for AWS S3 settings
+	 * @param S3EndpointConfig|null $endpoint Endpoint configuration, null for AWS S3 settings
 	 */
-	public static function Init(Credentials $credentials, $region = '', EndpointConfig $endpoint = null)
+	public static function Init(S3Credentials $credentials, $region = '', S3EndpointConfig $endpoint = null)
 	{
 		self::setCredentials($credentials);
 
 		self::$region = $region;
 
 		if ($endpoint === null) {
-			$endpoint = new EndpointConfig();
+			$endpoint = new S3EndpointConfig();
 		}
 
 		self::setEndpoint($endpoint);
@@ -192,17 +192,17 @@ class S3
 	/**
 	 * Endpoint override helper
 	 *
-	 * @param EndpointConfig|null $endpoint
-	 * @return EndpointConfig
+	 * @param S3EndpointConfig|null $endpoint
+	 * @return S3EndpointConfig
 	 */
-	public static function getEndpoint(EndpointConfig $endpoint = null)
+	public static function getEndpoint(S3EndpointConfig $endpoint = null)
 	{
 		if ($endpoint !== null) {
 			return $endpoint;
 		}
 
 		if (self::$__defaultEndpoint === null) {
-			self::$__defaultEndpoint = new EndpointConfig();
+			self::$__defaultEndpoint = new S3EndpointConfig();
 		}
 
 		return self::$__defaultEndpoint;
@@ -212,10 +212,10 @@ class S3
 	/**
 	 * Set the service endpoint
 	 *
-	 * @param EndpointConfig $endpoint
+	 * @param S3EndpointConfig $endpoint
 	 * @return void
 	 */
-	public static function setEndpoint(EndpointConfig $endpoint)
+	public static function setEndpoint(S3EndpointConfig $endpoint)
 	{
 		self::$__defaultEndpoint = $endpoint;
 	}
@@ -236,11 +236,11 @@ class S3
 	/**
 	 * Get the service region
 	 *
-	 * @param EndpointConfig|null $endpoint
+	 * @param S3EndpointConfig|null $endpoint
 	 * @return string
 	 * @static
 	 */
-	public static function getRegion(EndpointConfig $endpoint = null)
+	public static function getRegion(S3EndpointConfig $endpoint = null)
 	{
 		if (!empty(self::$region))
 		{
@@ -262,16 +262,16 @@ class S3
 	*/
 	public static function setAuth($accessKey, $secretKey)
 	{
-		self::setCredentials(new Credentials($accessKey, $secretKey));
+		self::setCredentials(new S3Credentials($accessKey, $secretKey));
 	}
 
 
 	/**
 	 * Set default credentials
 	 *
-	 * @param Credentials $creds
+	 * @param S3Credentials $creds
 	 */
-	public static function setCredentials(Credentials $creds)
+	public static function setCredentials(S3Credentials $creds)
 	{
 		self::$__defaultCredentials = $creds;
 	}
@@ -290,10 +290,10 @@ class S3
 	/**
 	 * Get access-key if set, otherwise null
 	 *
-	 * @param Credentials|null $creds
-	 * @return Credentials|null
+	 * @param S3Credentials|null $creds
+	 * @return S3Credentials|null
 	 */
-	public static function getCredentials(Credentials $creds = null)
+	public static function getCredentials(S3Credentials $creds = null)
 	{
 		if ($creds !== null && $creds->isInitialised()) {
 			return $creds;
@@ -375,10 +375,10 @@ class S3
 	 * resort when the system time cannot be changed.
 	 *
 	 * @param int $offset Time offset (set to zero to use AWS server time)
-	 * @param EndpointConfig|null $endpoint
+	 * @param S3EndpointConfig|null $endpoint
 	 * @return void
 	 */
-	public static function setTimeCorrectionOffset($offset = 0, EndpointConfig $endpoint = null)
+	public static function setTimeCorrectionOffset($offset = 0, S3EndpointConfig $endpoint = null)
 	{
 		if ($offset === 0)
 		{
@@ -481,11 +481,11 @@ class S3
 	 * Get a list of buckets
 	 *
 	 * @param boolean $detailed Returns detailed bucket list when true
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return array | false
 	 */
-	public static function listBuckets($detailed = false, EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function listBuckets($detailed = false, S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		$rest = new S3Request('GET', null, '', $endpoint, $creds);
 		$rest = $rest->getResponse();
@@ -523,19 +523,19 @@ class S3
 	 *
 	 * If maxKeys is null this method will loop through truncated result sets
 	 *
-	 * @param string|BucketConfig $bucket Bucket name
+	 * @param string|S3BucketConfig $bucket Bucket name
 	 * @param string $prefix Prefix
 	 * @param string $marker Marker (last file listed)
 	 * @param string $maxKeys Max keys (maximum number of keys to return)
 	 * @param string $delimiter Delimiter
 	 * @param boolean $returnCommonPrefixes Set to true to return CommonPrefixes
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return array | false
 	 */
 	public static function getBucket($bucket, $prefix = null, $marker = null, $maxKeys = null, $delimiter = null,
 									 $returnCommonPrefixes = false,
-									 EndpointConfig $endpoint = null, Credentials $creds = null)
+									 S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		$rest = new S3Request('GET', $bucket, '', $endpoint, $creds);
 		if ($maxKeys === 0) $maxKeys = null;
@@ -621,11 +621,11 @@ class S3
 	 * @param string $bucket Bucket name
 	 * @param string $acl ACL flag
 	 * @param string|bool $location Set as "EU" to create buckets hosted in Europe
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return boolean
 	 */
-	public static function putBucket($bucket, $acl = self::ACL_PRIVATE, $location = false, EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function putBucket($bucket, $acl = self::ACL_PRIVATE, $location = false, S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		$endpoint = self::getEndpoint($endpoint);
 
@@ -639,11 +639,11 @@ class S3
 			}
 		}
 
-		$rest = new S3Request('PUT', new BucketConfig($bucket, $endpoint->defaultRegion), '', $endpoint, $creds);
+		$rest = new S3Request('PUT', new S3BucketConfig($bucket, $endpoint->defaultRegion), '', $endpoint, $creds);
 		$rest->setAmzHeader('x-amz-acl', $acl);
 
-		if ($endpoint->hostname !== EndpointConfig::AWS_S3_DEFAULT_HOST
-			|| $location !== EndpointConfig::AWS_S3_DEFAULT_REGION) {
+		if ($endpoint->hostname !== S3EndpointConfig::AWS_S3_DEFAULT_HOST
+			|| $location !== S3EndpointConfig::AWS_S3_DEFAULT_REGION) {
 
 			$dom = new DOMDocument;
 			$createBucketConfiguration = $dom->createElement('CreateBucketConfiguration');
@@ -680,12 +680,12 @@ class S3
 	/**
 	 * Delete an empty bucket
 	 *
-	 * @param string|BucketConfig $bucket Bucket name
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param string|S3BucketConfig $bucket Bucket name
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return boolean
 	 */
-	public static function deleteBucket($bucket, EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function deleteBucket($bucket, S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		$rest = new S3Request('DELETE', $bucket, '', $endpoint, $creds);
 		$rest = $rest->getResponse();
@@ -769,18 +769,18 @@ class S3
 	 * Put an object
 	 *
 	 * @param mixed $input Input data
-	 * @param string|BucketConfig $bucket Bucket name
+	 * @param string|S3BucketConfig $bucket Bucket name
 	 * @param string $uri Object URI
 	 * @param string $acl ACL constant
 	 * @param array $metaHeaders Array of x-amz-meta-* headers
 	 * @param array|string $requestHeaders Array of request headers or content type as a string
 	 * @param string $storageClass Storage class constant
 	 * @param string $serverSideEncryption Server-side encryption
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return boolean
 	 */
-	public static function putObject($input, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array(), $storageClass = self::STORAGE_CLASS_STANDARD, $serverSideEncryption = self::SSE_NONE, EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function putObject($input, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array(), $storageClass = self::STORAGE_CLASS_STANDARD, $serverSideEncryption = self::SSE_NONE, S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		if ($input === false) return false;
 		$rest = new S3Request('PUT', $bucket, $uri, $endpoint, $creds);
@@ -863,21 +863,21 @@ class S3
 	 * Put an object from a file (legacy function)
 	 *
 	 * @param string $file Input file path
-	 * @param string|BucketConfig $bucket Bucket name
+	 * @param string|S3BucketConfig $bucket Bucket name
 	 * @param string $uri Object URI
 	 * @param string $acl ACL constant
 	 * @param array $metaHeaders Array of x-amz-meta-* headers
 	 * @param string $contentType Content type
 	 * @param string $storageClass
 	 * @param string $serverSideEncryption
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return boolean
 	 */
 	public static function putObjectFile(
 		$file, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $contentType = null,
 		$storageClass = self::STORAGE_CLASS_STANDARD, $serverSideEncryption = self::SSE_NONE,
-		EndpointConfig $endpoint = null, Credentials $creds = null)
+		S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		return self::putObject(self::inputFile($file), $bucket, $uri, $acl, $metaHeaders, $contentType, $storageClass, $serverSideEncryption, $endpoint, $creds);
 	}
@@ -887,21 +887,21 @@ class S3
 	 * Put an object from a string (legacy function)
 	 *
 	 * @param string $string Input data
-	 * @param string|BucketConfig $bucket Bucket name
+	 * @param string|S3BucketConfig $bucket Bucket name
 	 * @param string $uri Object URI
 	 * @param string $acl ACL constant
 	 * @param array $metaHeaders Array of x-amz-meta-* headers
 	 * @param string $contentType Content type
 	 * @param string $storageClass
 	 * @param string $serverSideEncryption
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return boolean
 	 */
 	public static function putObjectString(
 		$string, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $contentType = 'text/plain',
 		$storageClass = self::STORAGE_CLASS_STANDARD, $serverSideEncryption = self::SSE_NONE,
-		EndpointConfig $endpoint = null, Credentials $creds = null)
+		S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		return self::putObject($string, $bucket, $uri, $acl, $metaHeaders, $contentType, $storageClass, $serverSideEncryption, $endpoint, $creds);
 	}
@@ -910,14 +910,14 @@ class S3
 	/**
 	 * Get an object
 	 *
-	 * @param string|BucketConfig $bucket Bucket name
+	 * @param string|S3BucketConfig $bucket Bucket name
 	 * @param string $uri Object URI
 	 * @param mixed $saveTo Filename or resource to write to
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return mixed
 	 */
-	public static function getObject($bucket, $uri, $saveTo = false, EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function getObject($bucket, $uri, $saveTo = false, S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		$rest = new S3Request('GET', $bucket, $uri, $endpoint, $creds);
 		if ($saveTo !== false)
@@ -944,14 +944,14 @@ class S3
 	/**
 	 * Get object information
 	 *
-	 * @param string|BucketConfig $bucket Bucket name
+	 * @param string|S3BucketConfig $bucket Bucket name
 	 * @param string $uri Object URI
 	 * @param boolean $returnInfo Return response information
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return mixed | false
 	 */
-	public static function getObjectInfo($bucket, $uri, $returnInfo = true, EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function getObjectInfo($bucket, $uri, $returnInfo = true, S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		$rest = new S3Request('HEAD', $bucket, $uri, $endpoint, $creds);
 		$rest = $rest->getResponse();
@@ -978,17 +978,17 @@ class S3
 	 *
 	 * @param string $srcBucket Source bucket name
 	 * @param string $srcUri Source object URI
-	 * @param string|BucketConfig $bucket Destination bucket name
+	 * @param string|S3BucketConfig $bucket Destination bucket name
 	 * @param string $uri Destination object URI
 	 * @param string $acl ACL constant
 	 * @param array $metaHeaders Optional array of x-amz-meta-* headers
 	 * @param array $requestHeaders Optional array of request headers (content type, disposition, etc.)
 	 * @param string $storageClass Storage class constant
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return mixed | false
 	 */
-	public static function copyObject($srcBucket, $srcUri, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array(), $storageClass = self::STORAGE_CLASS_STANDARD, EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function copyObject($srcBucket, $srcUri, $bucket, $uri, $acl = self::ACL_PRIVATE, $metaHeaders = array(), $requestHeaders = array(), $storageClass = self::STORAGE_CLASS_STANDARD, S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		$rest = new S3Request('PUT', $bucket, $uri, $endpoint, $creds);
 		$rest->setHeader('Content-Length', 0);
@@ -1021,13 +1021,13 @@ class S3
 	/**
 	 * Set up a bucket redirection
 	 *
-	 * @param string|BucketConfig $bucket Bucket name
+	 * @param string|S3BucketConfig $bucket Bucket name
 	 * @param string $location Target host name
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return boolean
 	 */
-	public static function setBucketRedirect($bucket = NULL, $location = NULL, EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function setBucketRedirect($bucket = NULL, $location = NULL, S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		$rest = new S3Request('PUT', $bucket, '', $endpoint, $creds);
 
@@ -1064,14 +1064,14 @@ class S3
 	/**
 	 * Set logging for a bucket
 	 *
-	 * @param string|BucketConfig $bucket Bucket name
+	 * @param string|S3BucketConfig $bucket Bucket name
 	 * @param string $targetBucket Target bucket (where logs are stored)
 	 * @param string $targetPrefix Log prefix (e,g; domain.com-)
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return boolean
 	 */
-	public static function setBucketLogging($bucket, $targetBucket, $targetPrefix = null, EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function setBucketLogging($bucket, $targetBucket, $targetPrefix = null, S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		// The S3 log delivery group has to be added to the target bucket's ACP
 		if ($targetBucket !== null && ($acp = self::getAccessControlPolicy($targetBucket)) !== false)
@@ -1132,12 +1132,12 @@ class S3
 	 * This will return false if logging is not enabled.
 	 * Note: To enable logging, you also need to grant write access to the log group
 	 *
-	 * @param string|BucketConfig $bucket Bucket name
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param string|S3BucketConfig $bucket Bucket name
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return array | false
 	 */
-	public static function getBucketLogging($bucket, EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function getBucketLogging($bucket, S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		$rest = new S3Request('GET', $bucket, '', $endpoint, $creds);
 		$rest->setParameter('logging', null);
@@ -1161,12 +1161,12 @@ class S3
 	/**
 	 * Disable bucket logging
 	 *
-	 * @param string|BucketConfig $bucket Bucket name
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param string|S3BucketConfig $bucket Bucket name
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return boolean
 	 */
-	public static function disableBucketLogging($bucket, EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function disableBucketLogging($bucket, S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		return self::setBucketLogging($bucket, null, null, $endpoint, $creds);
 	}
@@ -1176,15 +1176,15 @@ class S3
 	 * Get a bucket's location
 	 *
 	 * @param string $bucket Bucket name
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return string | false
 	 */
-	public static function getBucketLocation($bucket, EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function getBucketLocation($bucket, S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		// https://github.com/aws/aws-sdk-js/issues/462
 		// Setting up any region other than 'us-east-1'
-		$bucketConfig = new BucketConfig($bucket, 'us-west-2');
+		$bucketConfig = new S3BucketConfig($bucket, 'us-west-2');
 
 		$rest = new S3Request('GET', $bucketConfig, '', $endpoint, $creds);
 		$rest->setParameter('location', null);
@@ -1204,14 +1204,14 @@ class S3
 	/**
 	 * Set object or bucket Access Control Policy
 	 *
-	 * @param string|BucketConfig $bucket Bucket name
+	 * @param string|S3BucketConfig $bucket Bucket name
 	 * @param string $uri Object URI
 	 * @param array $acp Access Control Policy Data (same as the data returned from getAccessControlPolicy)
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return boolean
 	 */
-	public static function setAccessControlPolicy($bucket, $uri = '', $acp = array(), EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function setAccessControlPolicy($bucket, $uri = '', $acp = array(), S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		$dom = new DOMDocument;
 		$dom->formatOutput = true;
@@ -1275,11 +1275,11 @@ class S3
 	 *
 	 * @param string $bucket Bucket name
 	 * @param string $uri Object URI
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return mixed | false
 	 */
-	public static function getAccessControlPolicy($bucket, $uri = '', EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function getAccessControlPolicy($bucket, $uri = '', S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		$rest = new S3Request('GET', $bucket, $uri, $endpoint, $creds);
 		$rest->setParameter('acl', null);
@@ -1338,11 +1338,11 @@ class S3
 	 *
 	 * @param string $bucket Bucket name
 	 * @param string $uri Object URI
-	 * @param EndpointConfig|null $endpoint
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig|null $endpoint
+	 * @param S3Credentials|null $creds
 	 * @return boolean
 	 */
-	public static function deleteObject($bucket, $uri, EndpointConfig $endpoint = null, Credentials $creds = null)
+	public static function deleteObject($bucket, $uri, S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		$rest = new S3Request('DELETE', $bucket, $uri, $endpoint, $creds);
 		$rest = $rest->getResponse();
@@ -1507,10 +1507,10 @@ class S3
 	 * @param string $defaultRootObject Default root object
 	 * @param string $originAccessIdentity Origin access identity
 	 * @param array $trustedSigners Array of trusted signers
-	 * @param Credentials|null $creds
+	 * @param S3Credentials|null $creds
 	 * @return array | false
 	 */
-	public static function createDistribution($bucket, $enabled = true, $cnames = array(), $comment = null, $defaultRootObject = null, $originAccessIdentity = null, $trustedSigners = array(), Credentials $creds = null)
+	public static function createDistribution($bucket, $enabled = true, $cnames = array(), $comment = null, $defaultRootObject = null, $originAccessIdentity = null, $trustedSigners = array(), S3Credentials $creds = null)
 	{
 		if (!extension_loaded('openssl'))
 		{
@@ -1519,7 +1519,7 @@ class S3
 			return false;
 		}
 
-		$cloudfrontEndpoint = new EndpointConfig('cloudfront.amazonaws.com');
+		$cloudfrontEndpoint = new S3EndpointConfig('cloudfront.amazonaws.com');
 		$rest = new S3Request('POST', null, '2010-11-01/distribution', $cloudfrontEndpoint, $creds);
 		$rest->data = self::__getCloudFrontDistributionConfigXML(
 			$bucket.'.s3.amazonaws.com',
@@ -1553,10 +1553,10 @@ class S3
 	 * Get CloudFront distribution info
 	 *
 	 * @param string $distributionId Distribution ID from listDistributions()
-	 * @param Credentials|null $creds
+	 * @param S3Credentials|null $creds
 	 * @return array | false
 	 */
-	public static function getDistribution($distributionId, Credentials $creds = null)
+	public static function getDistribution($distributionId, S3Credentials $creds = null)
 	{
 		if (!extension_loaded('openssl'))
 		{
@@ -1565,7 +1565,7 @@ class S3
 			return false;
 		}
 
-		$cloudfrontEndpoint = new EndpointConfig('cloudfront.amazonaws.com');
+		$cloudfrontEndpoint = new S3EndpointConfig('cloudfront.amazonaws.com');
 		$rest = new S3Request('GET', null, '2010-11-01/distribution/'.$distributionId, $cloudfrontEndpoint, $creds);
 		$rest = self::__getCloudFrontResponse($rest);
 
@@ -1594,10 +1594,10 @@ class S3
 	 * Update a CloudFront distribution
 	 *
 	 * @param array $dist Distribution array info identical to output of getDistribution()
-	 * @param Credentials|null $creds
+	 * @param S3Credentials|null $creds
 	 * @return array | false
 	 */
-	public static function updateDistribution($dist, Credentials $creds = null)
+	public static function updateDistribution($dist, S3Credentials $creds = null)
 	{
 		if (!extension_loaded('openssl'))
 		{
@@ -1606,7 +1606,7 @@ class S3
 			return false;
 		}
 
-		$cloudfrontEndpoint = new EndpointConfig('cloudfront.amazonaws.com');
+		$cloudfrontEndpoint = new S3EndpointConfig('cloudfront.amazonaws.com');
 		$rest = new S3Request('PUT', null, '2010-11-01/distribution/'.$dist['id'].'/config', $cloudfrontEndpoint, $creds);
 		$rest->data = self::__getCloudFrontDistributionConfigXML(
 			$dist['origin'],
@@ -1642,10 +1642,10 @@ class S3
 	 * Delete a CloudFront distribution
 	 *
 	 * @param array $dist Distribution array info identical to output of getDistribution()
-	 * @param Credentials|null $creds
+	 * @param S3Credentials|null $creds
 	 * @return boolean
 	 */
-	public static function deleteDistribution($dist, Credentials $creds = null)
+	public static function deleteDistribution($dist, S3Credentials $creds = null)
 	{
 		if (!extension_loaded('openssl'))
 		{
@@ -1654,7 +1654,7 @@ class S3
 			return false;
 		}
 
-		$cloudfrontEndpoint = new EndpointConfig('cloudfront.amazonaws.com');
+		$cloudfrontEndpoint = new S3EndpointConfig('cloudfront.amazonaws.com');
 		$rest = new S3Request('DELETE', null, '2008-06-30/distribution/'.$dist['id'], $cloudfrontEndpoint, $creds);
 		$rest->setHeader('If-Match', $dist['hash']);
 		$rest = self::__getCloudFrontResponse($rest);
@@ -1674,10 +1674,10 @@ class S3
 	/**
 	 * Get a list of CloudFront distributions
 	 *
-	 * @param Credentials|null $creds
+	 * @param S3Credentials|null $creds
 	 * @return array|bool
 	 */
-	public static function listDistributions(Credentials $creds = null)
+	public static function listDistributions(S3Credentials $creds = null)
 	{
 		if (!extension_loaded('openssl'))
 		{
@@ -1685,7 +1685,7 @@ class S3
 			return false;
 		}
 
-		$cloudfrontEndpoint = new EndpointConfig('cloudfront.amazonaws.com');
+		$cloudfrontEndpoint = new S3EndpointConfig('cloudfront.amazonaws.com');
 		$rest = new S3Request('GET', null, '2010-11-01/distribution', $cloudfrontEndpoint, $creds);
 		$rest = self::__getCloudFrontResponse($rest);
 
@@ -1712,10 +1712,10 @@ class S3
 	/**
 	 * List CloudFront Origin Access Identities
 	 *
-	 * @param Credentials|null $creds
+	 * @param S3Credentials|null $creds
 	 * @return array|bool
 	 */
-	public static function listOriginAccessIdentities(Credentials $creds = null)
+	public static function listOriginAccessIdentities(S3Credentials $creds = null)
 	{
 		if (!extension_loaded('openssl'))
 		{
@@ -1723,7 +1723,7 @@ class S3
 			return false;
 		}
 
-		$cloudfrontEndpoint = new EndpointConfig('cloudfront.amazonaws.com');
+		$cloudfrontEndpoint = new S3EndpointConfig('cloudfront.amazonaws.com');
 		$rest = new S3Request('GET', null, '2010-11-01/origin-access-identity/cloudfront', $cloudfrontEndpoint, $creds);
 		$rest = self::__getCloudFrontResponse($rest);
 
@@ -1755,10 +1755,10 @@ class S3
 	 *
 	 * @param string $distributionId Distribution ID from listDistributions()
 	 * @param array $paths Array of object paths to invalidate
-	 * @param Credentials|null $creds
+	 * @param S3Credentials|null $creds
 	 * @return bool
 	 */
-	public static function invalidateDistribution($distributionId, $paths, Credentials $creds = null)
+	public static function invalidateDistribution($distributionId, $paths, S3Credentials $creds = null)
 	{
 		if (!extension_loaded('openssl'))
 		{
@@ -1766,7 +1766,7 @@ class S3
 			return false;
 		}
 
-		$cloudfrontEndpoint = new EndpointConfig('cloudfront.amazonaws.com');
+		$cloudfrontEndpoint = new S3EndpointConfig('cloudfront.amazonaws.com');
 
 		$rest = new S3Request('POST', null, '2010-08-01/distribution/'.$distributionId.'/invalidation', $cloudfrontEndpoint, $creds);
 		$rest->data = self::__getCloudFrontInvalidationBatchXML($paths, (string)microtime(true));
@@ -1821,10 +1821,10 @@ class S3
 	 *    )
 	 *
 	 * @param string $distributionId Distribution ID from listDistributions()
-	 * @param Credentials|null $creds
+	 * @param S3Credentials|null $creds
 	 * @return array|bool
 	 */
-	public static function getDistributionInvalidationList($distributionId, Credentials $creds = null)
+	public static function getDistributionInvalidationList($distributionId, S3Credentials $creds = null)
 	{
 		if (!extension_loaded('openssl'))
 		{
@@ -1832,7 +1832,7 @@ class S3
 			return false;
 		}
 
-		$cloudfrontEndpoint = new EndpointConfig('cloudfront.amazonaws.com');
+		$cloudfrontEndpoint = new S3EndpointConfig('cloudfront.amazonaws.com');
 
 		$rest = new S3Request('GET', null, '2010-11-01/distribution/'.$distributionId.'/invalidation', $cloudfrontEndpoint, $creds);
 		$rest = self::__getCloudFrontResponse($rest);
@@ -2069,11 +2069,11 @@ class S3
 	 * Generate the auth string: "AWS AccessKey:Signature"
 	 *
 	 * @param string $string String to sign
-	 * @param Credentials $creds
+	 * @param S3Credentials $creds
 	 * @return string
 	 * @internal Used by S3Request::getResponse()
 	 */
-	public static function __getSignature($string, Credentials $creds)
+	public static function __getSignature($string, S3Credentials $creds)
 	{
 		return 'AWS '.$creds->accessKey.':'.self::__getHash($string, $creds->secretKey);
 	}
@@ -2112,12 +2112,12 @@ class S3
 	 * @param string $method
 	 * @param string $uri
 	 * @param array $parameters
-	 * @param Credentials $creds
+	 * @param S3Credentials $creds
 	 * @param string $region
 	 * @return string
 	 * @internal Used by S3Request::getResponse()
 	 */
-	public static function __getSignatureV4($amzHeaders, $headers, $method, $uri, $parameters, Credentials $creds, $region)
+	public static function __getSignatureV4($amzHeaders, $headers, $method, $uri, $parameters, S3Credentials $creds, $region)
 	{
 		$service = 's3';
 
@@ -2215,17 +2215,17 @@ class S3
 	/**
 	 * Helper to transition from bucket names to bucket-config
 	 *
-	 * @param string|BucketConfig $bucket
-	 * @param EndpointConfig $endpoint
-	 * @return BucketConfig
+	 * @param string|S3BucketConfig $bucket
+	 * @param S3EndpointConfig $endpoint
+	 * @return S3BucketConfig
 	 */
-	public static function makeBucketConfig($bucket, EndpointConfig $endpoint)
+	public static function makeBucketConfig($bucket, S3EndpointConfig $endpoint)
 	{
-		if ($bucket instanceof BucketConfig) {
+		if ($bucket instanceof S3BucketConfig) {
 			return $bucket;
 		}
 
-		return new BucketConfig($bucket, self::getRegion($endpoint));
+		return new S3BucketConfig($bucket, self::getRegion($endpoint));
 	}
 }
 
@@ -2240,12 +2240,12 @@ final class S3Request
 	/**
 	 * endpoint config
 	 *
-	 * @var EndpointConfig
+	 * @var S3EndpointConfig
 	 */
 	private $endpoint;
 
 	/**
-	 * @var Credentials
+	 * @var S3Credentials
 	 */
 	private $credentials;
 
@@ -2259,7 +2259,7 @@ final class S3Request
 	/**
 	 * bucket config
 	 *
-	 * @var BucketConfig
+	 * @var S3BucketConfig
 	 * @access private
 	 */
 	private $bucket;
@@ -2343,12 +2343,12 @@ final class S3Request
 	 * Constructor
 	 *
 	 * @param string $verb Verb
-	 * @param BucketConfig|string $bucket Bucket config
+	 * @param S3BucketConfig|string $bucket Bucket config
 	 * @param string $uri Object URI
-	 * @param EndpointConfig $endpoint AWS endpoint URI
-	 * @param Credentials|null $creds
+	 * @param S3EndpointConfig $endpoint AWS endpoint URI
+	 * @param S3Credentials|null $creds
 	 */
-	public function __construct($verb, $bucket = null, $uri = '', EndpointConfig $endpoint = null, Credentials $creds = null)
+	public function __construct($verb, $bucket = null, $uri = '', S3EndpointConfig $endpoint = null, S3Credentials $creds = null)
 	{
 		$this->endpoint = S3::getEndpoint($endpoint);
 		$this->credentials = S3::getCredentials($creds);
@@ -2686,9 +2686,9 @@ class S3Exception extends Exception {
 }
 
 /**
- * EndpointConfig class
+ * S3EndpointConfig class
  */
-final class EndpointConfig
+final class S3EndpointConfig
 {
 	const AWS_S3_SUFFIX = '.amazonaws.com';
 	const AWS_S3_SUFFIX_LENGTH = 14;
@@ -2826,10 +2826,10 @@ final class EndpointConfig
 
 	/**
 	 * @param $uri
-	 * @param BucketConfig|null $bucket
+	 * @param S3BucketConfig|null $bucket
 	 * @return array
 	 */
-	public function resolveHostUriAndResource($uri, BucketConfig $bucket = null)
+	public function resolveHostUriAndResource($uri, S3BucketConfig $bucket = null)
 	{
 		if ($bucket === null) {
 			return array(
@@ -2945,9 +2945,9 @@ final class EndpointConfig
 }
 
 /**
- * BucketConfig class
+ * S3BucketConfig class
  */
-final class BucketConfig
+final class S3BucketConfig
 {
 	public $name;
 	public $region;
@@ -2965,9 +2965,9 @@ final class BucketConfig
 }
 
 /**
- * Credentials class
+ * S3Credentials class
  */
-final class Credentials
+final class S3Credentials
 {
 	public $accessKey;
 	public $secretKey;
