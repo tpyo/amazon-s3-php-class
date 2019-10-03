@@ -624,7 +624,6 @@ class S3
 			}
 		}
 
-		$endpoint = self::getEndpoint($endpoint);
 		$rest = new S3Request('PUT', new BucketConfig($bucket, $endpoint->defaultRegion), '', $endpoint);
 		$rest->setAmzHeader('x-amz-acl', $acl);
 
@@ -2373,8 +2372,8 @@ final class S3Request
 			curl_setopt($curl, CURLOPT_SSLVERSION, $this->endpoint->useSSLVersion);
 
 			// SSL Validation can now be optional for those with broken OpenSSL installations
-			curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, S3::getEndpoint()->useSSLValidation ? 2 : 0);
-			curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, S3::getEndpoint()->useSSLValidation ? 1 : 0);
+			curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, $this->endpoint->useSSLValidation ? 2 : 0);
+			curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, $this->endpoint->useSSLValidation ? 1 : 0);
 
 			if ($this->endpoint->sslKey !== null) curl_setopt($curl, CURLOPT_SSLKEY, $this->endpoint->sslKey);
 			if ($this->endpoint->sslCert !== null) curl_setopt($curl, CURLOPT_SSLCERT, $this->endpoint->sslCert);
