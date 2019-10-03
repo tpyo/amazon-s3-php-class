@@ -2001,7 +2001,7 @@ class S3
 	/**
 	* Get the current time
 	*
-	* @internal Used to apply offsets to sytem time
+	* @internal Used to apply offsets to system time
 	* @return integer
 	*/
 	public static function __getTime()
