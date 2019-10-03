@@ -2034,11 +2034,16 @@ class S3
 	*/
 	private static function __getHash($string)
 	{
-		return base64_encode(extension_loaded('hash') ?
-		hash_hmac('sha1', $string, self::getSecretKey(), true) : pack('H*', sha1(
-		(str_pad(self::getSecretKey(), 64, chr(0x00)) ^ (str_repeat(chr(0x5c), 64))) .
-		pack('H*', sha1((str_pad(self::getSecretKey(), 64, chr(0x00)) ^
-		(str_repeat(chr(0x36), 64))) . $string)))));
+		if (extension_loaded('hash')) {
+			return base64_encode(
+				hash_hmac('sha1', $string, self::getSecretKey(), true));
+		}
+
+		return base64_encode(
+			pack('H*', sha1(
+				(str_pad(self::getSecretKey(), 64, chr(0x00)) ^ str_repeat(chr(0x5c), 64)) .
+				pack('H*', sha1(
+					(str_pad(self::getSecretKey(), 64, chr(0x00)) ^ str_repeat(chr(0x36), 64)) . $string)))));
 	}
 
 
