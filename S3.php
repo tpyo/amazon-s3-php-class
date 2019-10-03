@@ -614,6 +614,8 @@ class S3
 	 */
 	public static function putBucket($bucket, $acl = self::ACL_PRIVATE, $location = false, EndpointConfig $endpoint = null)
 	{
+		$endpoint = self::getEndpoint($endpoint);
+
 		if ($location === false)
 		{
 			$location = self::getRegion($endpoint);
