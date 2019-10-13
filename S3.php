@@ -863,7 +863,7 @@ class S3
 	{
 		$rest = new S3Request('HEAD', $bucket, $uri, self::$endpoint);
 		$rest = $rest->getResponse();
-		if ($rest->error === false && ($rest->code !== 200 && $rest->code !== 404))
+		if ($rest->error === false && ($rest->code !== 200 && $rest->code !== 403 && $rest->code !== 404))
 			$rest->error = array('code' => $rest->code, 'message' => 'Unexpected HTTP status');
 		if ($rest->error !== false)
 		{
