@@ -2471,7 +2471,7 @@ final class S3Request
 
 		// Headers
 		$httpHeaders = array(); 
-		if (S3::hasAuth())
+		if ($this->credentials !== null)
 		{
 			// Authorization string (CloudFront stringToSign should only contain a date)
 			if ($this->endpoint->signatureVersion === S3::SigV2 || $this->headers['Host'] === 'cloudfront.amazonaws.com')
