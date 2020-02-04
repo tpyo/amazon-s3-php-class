@@ -28,6 +28,12 @@
 * Amazon S3 is a trademark of Amazon.com, Inc. or its affiliates.
 */
 
+// Add curl constants that are missing till PHP v5.5
+defined('CURL_SSLVERSION_DEFAULT') || define('CURL_SSLVERSION_DEFAULT', 0);
+defined('CURL_SSLVERSION_TLSv1')   || define('CURL_SSLVERSION_TLSv1', 1);
+defined('CURL_SSLVERSION_SSLv2')   || define('CURL_SSLVERSION_SSLv2', 2);
+defined('CURL_SSLVERSION_SSLv3')   || define('CURL_SSLVERSION_SSLv3', 3);
+
 if (getenv('SIGNATURE_DEBUG') === 'ON') {
 	function SigDebug($format)
 	{
@@ -2464,9 +2470,12 @@ final class S3Request
 		{
 			curl_setopt($curl, CURLOPT_PROXY, $this->endpoint->proxy['host']);
 			curl_setopt($curl, CURLOPT_PROXYTYPE, $this->endpoint->proxy['type']);
-			/** @noinspection NotOptimalIfConditionsInspection */
-			if (isset($this->endpoint->proxy['user'], $this->endpoint->proxy['pass']) && $this->endpoint->proxy['user'] !== null && $this->endpoint->proxy['pass'] !== null)
+			if (isset($this->endpoint->proxy['user'], $this->endpoint->proxy['pass'])
+				&& $this->endpoint->proxy['user'] !== null
+				&& $this->endpoint->proxy['pass'] !== null)
+			{
 				curl_setopt($curl, CURLOPT_PROXYUSERPWD, sprintf('%s:%s', $this->endpoint->proxy['user'], $this->endpoint->proxy['pass']));
+			}
 		}
 
 		// Headers
