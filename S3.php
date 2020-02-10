@@ -2142,7 +2142,7 @@ class S3
 		// Convert null query string parameters to strings and sort
 		$parameters = array_map('strval', $parameters); 
 		uksort($parameters, array('self', '__sortMetaHeadersCmp'));
-		$queryString = http_build_query($parameters, null, '&', PHP_QUERY_RFC3986);
+		$queryString = http_build_query($parameters, null, '&');
 
 		// Payload
 		$amzPayload = array($method);
