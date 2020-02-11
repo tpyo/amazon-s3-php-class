@@ -2783,7 +2783,7 @@ final class S3EndpointConfig
 
 	public function __construct($hostname = self::AWS_S3_DEFAULT_HOST, $defaultRegion = null)
 	{
-		if ($hostname === self::AWS_S3_DEFAULT_HOST) {
+		if ($defaultRegion === null && $hostname === self::AWS_S3_DEFAULT_HOST) {
 			$defaultRegion = self::AWS_S3_DEFAULT_REGION;
 		}
 
