@@ -6,24 +6,18 @@
 * S3 class - CloudFront usage
 */
 
-if (!class_exists('S3')) require_once 'S3.php';
+require_once 'vendor/autoload.php';
 
-// AWS access info
-if (!defined('awsAccessKey')) define('awsAccessKey', 'change-this');
-if (!defined('awsSecretKey')) define('awsSecretKey', 'change-this');
+// File to upload, we'll use this file since it exists
+list($uploadFile) = get_included_files();
 
+$bucketName = uniqid('s3test', false); // Temporary bucket
 
-// Check for CURL
-if (!extension_loaded('curl') && !@dl(PHP_SHLIB_SUFFIX == 'so' ? 'curl.so' : 'php_curl.dll'))
-	exit("\nERROR: CURL extension not loaded\n\n");
-
-// Pointless without your keys!
-if (awsAccessKey == 'change-this' || awsSecretKey == 'change-this')
-	exit("\nERROR: AWS access information required\n\nPlease edit the following lines in this file:\n\n".
-	"define('awsAccessKey', 'change-me');\ndefine('awsSecretKey', 'change-me');\n\n");
-
-
-S3::setAuth(awsAccessKey, awsSecretKey);
+// Initialise S3
+S3::Init(
+        new S3Credentials(_getenv('ACCESS_KEY'), _getenv('SECRET_KEY')),
+        _getenv('REGION', 'us-west-1')
+    );
 
 
 function test_createDistribution($bucket, $cnames = array()) {
@@ -36,7 +30,7 @@ function test_createDistribution($bucket, $cnames = array()) {
 
 function test_listDistributions() {
 	if (($dists = S3::listDistributions()) !== false) {
-		if (sizeof($dists) == 0) echo "listDistributions(): No distributions\n";
+		if (count($dists) === 0) echo "listDistributions(): No distributions\n";
 		foreach ($dists as $dist) {
 			var_dump($dist);
 		}
@@ -63,7 +57,7 @@ function test_deleteDistribution($distributionId) {
 	// To delete a distribution configuration you must first set enable=false with
 	// the updateDistrubution() method and wait for status=Deployed:
 	if (($dist = S3::getDistribution($distributionId)) !== false) {
-		if ($dist['status'] == 'Deployed') {
+		if ($dist['status'] === 'Deployed') {
 			echo "deleteDistribution($distributionId): "; var_dump(S3::deleteDistribution($dist));
 		} else {
 			echo "deleteDistribution($distributionId): Distribution not ready for deletion (status is not 'Deployed')\n";

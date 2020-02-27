@@ -11,9 +11,18 @@
         }
     ],
     "require": {
-        "php": ">=5.2.0"
+        "php": ">=5.2.0",
+        "ext-curl": "*",
+        "ext-dom": "*",
+        "ext-openssl": "*",
+        "ext-json": "*",
+        "ext-simplexml": "*",
+        "ext-fileinfo": "*"
     },
     "autoload": {
         "classmap": ["S3.php"]
+    },
+    "autoload-dev": {
+        "files": ["example-helpers.php"]
     }
 }

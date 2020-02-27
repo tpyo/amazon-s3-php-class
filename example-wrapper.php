@@ -6,54 +6,40 @@
 * Note: Although this wrapper works, it would be more efficient to use the S3 class instead
 */
 
-if (!class_exists('S3')) require_once 'S3.php';
-
-// AWS access info
-if (!defined('awsAccessKey')) define('awsAccessKey', 'change-this');
-if (!defined('awsSecretKey')) define('awsSecretKey', 'change-this');
-
-// Check for CURL
-if (!extension_loaded('curl') && !@dl(PHP_SHLIB_SUFFIX == 'so' ? 'curl.so' : 'php_curl.dll'))
-	exit("\nERROR: CURL extension not loaded\n\n");
-
-// Pointless without your keys!
-if (awsAccessKey == 'change-this' || awsSecretKey == 'change-this')
-	exit("\nERROR: AWS access information required\n\nPlease edit the following lines in this file:\n\n".
-	"define('awsAccessKey', 'change-me');\ndefine('awsSecretKey', 'change-me');\n\n");
-
-
-################################################################################
+require_once 'vendor/autoload.php';
 
 
 final class S3Wrapper extends S3 {
 	private $position = 0, $mode = '', $buffer;
 
+	private $url;
+
 	public function url_stat($path, $flags) {
-		self::__getURL($path);
+		$this->__getURL($path);
 		return (($info = self::getObjectInfo($this->url['host'], $this->url['path'])) !== false) ?
 		array('size' => $info['size'], 'mtime' => $info['time'], 'ctime' => $info['time']) : false;
 	}
 
 	public function unlink($path) {
-		self::__getURL($path);
+		$this->__getURL($path);
 		return self::deleteObject($this->url['host'], $this->url['path']);
 	}
 
 	public function mkdir($path, $mode, $options) {
-		self::__getURL($path);
-		return self::putBucket($this->url['host'], self::__translateMode($mode));
+		$this->__getURL($path);
+		return self::putBucket($this->url['host'], $this->__translateMode($mode));
 	}
 
 	public function rmdir($path) {
-		self::__getURL($path);
+		$this->__getURL($path);
 		return self::deleteBucket($this->url['host']);
 	}
 
 	public function dir_opendir($path, $options) {
-		self::__getURL($path);
+		$this->__getURL($path);
 		if (($contents = self::getBucket($this->url['host'], $this->url['path'])) !== false) {
 			$pathlen = strlen($this->url['path']);
-			if (substr($this->url['path'], -1) == '/') $pathlen++;
+			if (substr($this->url['path'], -1) === '/') $pathlen++;
 			$this->buffer = array();
 			foreach ($contents as $file) {
 				if ($pathlen > 0) $file['name'] = substr($file['name'], $pathlen);
@@ -78,7 +64,7 @@ final class S3Wrapper extends S3 {
 	}
 
 	public function stream_close() {
-		if ($this->mode == 'w') {
+		if ($this->mode === 'w') {
 			self::putObject($this->buffer, $this->url['host'], $this->url['path']);
 		}
 		$this->position = 0;
@@ -105,9 +91,9 @@ final class S3Wrapper extends S3 {
 	public function stream_open($path, $mode, $options, &$opened_path) {
 		if (!in_array($mode, array('r', 'rb', 'w', 'wb'))) return false; // Mode not supported
 		$this->mode = substr($mode, 0, 1);
-		self::__getURL($path);
+		$this->__getURL($path);
 		$this->position = 0;
-		if ($this->mode == 'r') {
+		if ($this->mode === 'r') {
 			if (($this->buffer = self::getObject($this->url['host'], $this->url['path'])) !== false) {
 				if (is_object($this->buffer->body)) $this->buffer->body = (string)$this->buffer->body;
 			} else return false;
@@ -142,7 +128,7 @@ final class S3Wrapper extends S3 {
 	public function stream_seek($offset, $whence) {
 		switch ($whence) {
 			case SEEK_SET:
-                if ($offset < strlen($this->buffer->body) && $offset >= 0) {
+                if ($offset >= 0 && $offset < strlen($this->buffer->body)) {
                     $this->position = $offset;
                     return true;
                 } else return false;
@@ -180,16 +166,21 @@ final class S3Wrapper extends S3 {
 			$acl = self::ACL_PUBLIC_READ; //$acl = self::ACL_PUBLIC_READ_WRITE;
 		return $acl;
 	}
-} stream_wrapper_register('s3', 'S3Wrapper');
+}
+
+stream_wrapper_register('s3', 'S3Wrapper');
 
 
 ################################################################################
 
 
-S3::setAuth(awsAccessKey, awsSecretKey);
+$bucketName = uniqid('s3test', false); // Temporary bucket
 
-
-$bucketName = uniqid('s3test');
+// Initialise S3
+S3::Init(
+	new S3Credentials(_getenv('ACCESS_KEY'), _getenv('SECRET_KEY')),
+	_getenv('REGION', 'us-west-1')
+);
 
 echo "Creating bucket: {$bucketName}\n";
 var_dump(mkdir("s3://{$bucketName}"));
