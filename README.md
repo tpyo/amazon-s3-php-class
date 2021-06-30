@@ -14,6 +14,7 @@ Statically (e,g; S3::getObject(...)):
 S3::setAuth($awsAccessKey, $awsSecretKey);
 ```
 
+
 ### Object Operations
 
 #### Uploading objects
