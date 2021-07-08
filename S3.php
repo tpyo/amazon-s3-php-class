@@ -226,6 +226,29 @@ class S3
 		self::$region = $region;
 	}
 
+	/**
+	 * Initializes S3 from a config file.
+	 * 
+	 * @param array configuration
+	 * @return void
+	 */
+	public function initialize($config) {
+		
+		// Load config file if config not defined.
+		if (empty($config)) {
+			get_instance()->config->load('s3', TRUE);
+			$config = get_instance()->config->item('s3');
+		}
+		
+		foreach ($config as $key => $val) {
+			if(!in_array($key, array('accessKey', 'secretKey'))) {
+				self::$$key = $val;
+			}
+		}
+		
+		if (isset($config["accessKey"]) && isset($config["secretKey"]))
+			self::setAuth($config["accessKey"], $config["secretKey"]);
+	}
 
 	/**
 	* Set the service endpoint
