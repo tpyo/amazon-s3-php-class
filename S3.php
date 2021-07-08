@@ -747,7 +747,7 @@ class S3
 			elseif (isset($input['file']))
 				$input['type'] = self::__getMIMEType($input['file']);
 			else
-				$input['type'] = 'application/octet-stream';
+				$input['type'] = self::__getMIMEType($uri);
 		}
 
 		if ($storageClass !== self::STORAGE_CLASS_STANDARD) // Storage class
