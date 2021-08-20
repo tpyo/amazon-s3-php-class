@@ -15,7 +15,7 @@
         }
     ],
     "require": {
-        "php": ">=7.3",
+        "php": ">=5.2|>=7.3",
         "ext-curl": "*",
         "ext-simplexml": "*"
     },
@@ -23,7 +23,7 @@
         "classmap": ["S3.php", "tests/S3BaseTest.php"]
     },
     "require-dev": {
-        "phpunit/phpunit": "9.x",
+        "phpunit/phpunit": "7.x|8.x|9.x",
         "guzzlehttp/guzzle": "^7.3"
     },
     "scripts": {
