@@ -11,9 +11,18 @@
         }
     ],
     "require": {
-        "php": ">=5.2.0"
+        "php": ">=7.3",
+        "ext-curl": "*",
+        "ext-simplexml": "*"
     },
     "autoload": {
-        "classmap": ["S3.php"]
+        "classmap": ["S3.php", "tests/S3BaseTest.php"]
+    },
+    "require-dev": {
+        "phpunit/phpunit": "9.x",
+        "guzzlehttp/guzzle": "^7.3"
+    },
+    "scripts": {
+        "test": "phpunit -vvv --testdox"
     }
 }

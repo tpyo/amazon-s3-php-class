@@ -1,0 +1,75 @@
+name: phpunit
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+jobs:
+  test:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        php-versions:
+        - '7.3'
+        - '7.4'
+        - '8.0'
+        
+    steps:
+    - name: Install s3cmd
+      run: |
+        sudo apt-get install s3cmd
+        s3cmd --version
+
+    - name: Set up the s3 bucket for testing
+      env:
+        S3_BUCKET: test.macbre.net
+        S3_REGION: eu-west-1
+
+      run: |
+        shopt -s expand_aliases # https://github.community/t/create-and-use-an-alias-inside-github-action/147616/3
+        alias s3='s3cmd --access_key=${{ secrets.S3_ACCESS_KEY }} --secret_key=${{ secrets.S3_SECRET_KEY }}'
+        set -x
+
+        echo 'Hi!' | s3 put --acl-public - s3://${S3_BUCKET}/README
+        echo 'I am a private file' | s3 put --acl-private - s3://${S3_BUCKET}/.private
+
+        s3 ls s3://${S3_BUCKET}/
+        curl -si https://s3-${S3_REGION}.amazonaws.com/${S3_BUCKET}/README
+
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-versions }}
+
+    - name: Get composer cache directory
+      id: composer-cache-directory
+      run: |
+        composer config cache-dir
+        echo "::set-output name=dir::$(composer config cache-dir)"
+    - name: composer cache
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.composer-cache-directory.outputs.dir }}
+        key: php-${{ matrix.php-versions }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          php-${{ matrix.php-versions }}-composer
+
+    - name: Compose setup
+      run: |
+        composer validate
+        composer check-platform-reqs
+        composer install --no-interaction
+
+    - name: Test the code
+      env:
+        S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+        S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+        S3_BUCKET: test.macbre.net
+        S3_REGION: eu-west-1
+
+      run: |
+        composer run test
