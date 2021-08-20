@@ -23,6 +23,7 @@
         "guzzlehttp/guzzle": "^7.3"
     },
     "scripts": {
+        "coverage": "phpunit --coverage-html=.coverage --coverage-text --verbose --testdox",
         "test": "phpunit -vvv --testdox"
     }
 }
