@@ -8,6 +8,10 @@
         {
             "name": "Donovan Schönknecht",
             "email": "don@tpyo.net"
+        },
+        {
+            "name": "Maciej Brencz",
+            "email": "macbre@elecena.pl"
         }
     ],
     "require": {
