@@ -2004,7 +2004,7 @@ class S3
 
 		// CanonicalHeaders
 		foreach ($headers as $k => $v)
-			$combinedHeaders[strtolower($k)] = trim($v);
+			if (!empty($v)) $combinedHeaders[strtolower($k)] = trim($v);
 		foreach ($amzHeaders as $k => $v) 
 			$combinedHeaders[strtolower($k)] = trim($v);
 		uksort($combinedHeaders, array(self::class, '__sortMetaHeadersCmp'));
